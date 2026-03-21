@@ -473,28 +473,3 @@ END $$
 DELIMITER ;
 
 SET FOREIGN_KEY_CHECKS = 1;
-
--- Sample test statements for Navicat:
--- CALL sp_delete_user(2, 3);
--- Result: fail, because administrator cannot delete another administrator.
-
--- CALL sp_delete_user(2, 4);
--- Result: success, because administrator can delete a normal user.
-
--- CALL sp_delete_user(4, 5);
--- Result: fail, because a normal user cannot delete another normal user.
-
--- CALL sp_delete_user(4, 4);
--- Result: success, because a normal user can delete own account.
-
--- CALL sp_delete_article(4, 1);
--- Result: fail, because user 4 is not the author of article 1.
-
--- CALL sp_delete_article(4, 2);
--- Result: success, because user 4 is the author of article 2.
-
--- CALL sp_delete_comment(5, 1);
--- Result: fail, because user 5 is not the author of comment 1.
-
--- CALL sp_delete_comment(5, 3);
--- Result: success, because user 5 is the author of comment 3.
