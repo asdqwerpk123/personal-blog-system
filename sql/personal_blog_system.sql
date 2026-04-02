@@ -424,6 +424,18 @@ proc_label: BEGIN
         update_time = CURRENT_TIMESTAMP
     WHERE id = p_article_id;
 
+    UPDATE blog_article_tag
+    SET deleted = 1,
+        update_time = CURRENT_TIMESTAMP
+    WHERE article_id = p_article_id
+      AND deleted = 0;
+
+    UPDATE blog_comment
+    SET deleted = 1,
+        update_time = CURRENT_TIMESTAMP
+    WHERE article_id = p_article_id
+      AND deleted = 0;
+
     INSERT INTO sys_operation_log (
         operator_user_id, target_type, target_id, action_type, action_result, action_detail
     ) VALUES (
@@ -470,6 +482,12 @@ proc_label: BEGIN
         SIGNAL SQLSTATE '45000'
         SET MESSAGE_TEXT = 'Normal user can only delete own comment.';
     END IF;
+
+    UPDATE blog_comment
+    SET parent_id = NULL,
+        update_time = CURRENT_TIMESTAMP
+    WHERE parent_id = p_comment_id
+      AND deleted = 0;
 
     UPDATE blog_comment
     SET deleted = 1,
