@@ -1,0 +1,7 @@
+#!/bin/sh
+
+repo_root="$(git rev-parse --show-toplevel)"
+win_repo_root="$(cd "$repo_root" && pwd -W)"
+
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$win_repo_root\scripts\run-pre-commit.ps1"
+exit $?
