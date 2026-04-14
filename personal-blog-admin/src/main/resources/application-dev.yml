@@ -13,8 +13,8 @@ spring:
       stat-view-servlet:
         enabled: true
         url-pattern: /druid/*
-        login-username: admin
-        login-password: admin123
+        login-username: ${BLOG_DRUID_MONITOR_USERNAME:admin}
+        login-password: ${BLOG_DRUID_MONITOR_PASSWORD:admin123}
       web-stat-filter:
         enabled: true
         url-pattern: /*

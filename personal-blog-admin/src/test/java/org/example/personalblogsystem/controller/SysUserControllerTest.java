@@ -1,5 +1,6 @@
 package org.example.personalblogsystem.controller;
 
+import org.example.personalblogsystem.PersonalBlogSystemApplication;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,7 +13,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest(properties = "spring.profiles.active=test")
+@SpringBootTest(classes = PersonalBlogSystemApplication.class,
+        properties = "spring.profiles.active=test")
 class SysUserControllerTest {
 
     @Autowired
@@ -32,5 +34,64 @@ class SysUserControllerTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.userName").value("root"));
+    }
+
+    @Test
+    void shouldReturnPagedUsers() throws Exception {
+        mockMvc.perform(get("/admin/user/page")
+                        .param("current", "1")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.current").value(1))
+                .andExpect(jsonPath("$.data.size").value(2))
+                .andExpect(jsonPath("$.data.records.length()").value(2))
+                .andExpect(jsonPath("$.data.total").value(5));
+    }
+
+    @Test
+    void shouldFilterPagedUsersByKeyword() throws Exception {
+        mockMvc.perform(get("/admin/user/page")
+                        .param("current", "1")
+                        .param("size", "10")
+                        .param("keyword", "root"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.records.length()").value(1))
+                .andExpect(jsonPath("$.data.records[0].userName").value("root"));
+    }
+
+    @Test
+    void shouldReturnNotFoundForMissingUser() throws Exception {
+        mockMvc.perform(get("/admin/user/999"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    void shouldRejectNonPositiveCurrentPage() throws Exception {
+        mockMvc.perform(get("/admin/user/page")
+                        .param("current", "0")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    void shouldRejectNonPositivePageSize() throws Exception {
+        mockMvc.perform(get("/admin/user/page")
+                        .param("current", "1")
+                        .param("size", "0"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    void shouldRejectOversizedPageSize() throws Exception {
+        mockMvc.perform(get("/admin/user/page")
+                        .param("current", "1")
+                        .param("size", "101"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400));
     }
 }
