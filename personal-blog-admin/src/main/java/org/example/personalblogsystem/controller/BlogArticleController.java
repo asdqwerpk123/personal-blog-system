@@ -3,7 +3,10 @@ package org.example.personalblogsystem.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
+import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
+import org.example.personalblogsystem.entity.BlogTag;
+import org.example.personalblogsystem.service.IBlogArticleTagService;
 import org.example.personalblogsystem.service.IBlogArticleService;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -16,6 +19,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/admin/article")
 public class BlogArticleController {
@@ -23,9 +28,12 @@ public class BlogArticleController {
     private static final long MAX_PAGE_SIZE = 100L;
 
     private final IBlogArticleService blogArticleService;
+    private final IBlogArticleTagService blogArticleTagService;
 
-    public BlogArticleController(IBlogArticleService blogArticleService) {
+    public BlogArticleController(IBlogArticleService blogArticleService,
+                                 IBlogArticleTagService blogArticleTagService) {
         this.blogArticleService = blogArticleService;
+        this.blogArticleTagService = blogArticleTagService;
     }
 
     @GetMapping("/{id}")
@@ -42,10 +50,22 @@ public class BlogArticleController {
         return Result.ok(blogArticleService.pageArticles(current, size, keyword));
     }
 
+    @GetMapping("/{id}/tags")
+    public Result<List<BlogTag>> getTags(@PathVariable Long id) {
+        BlogArticle article = blogArticleService.getById(id);
+        return article == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(blogArticleTagService.listTagsByArticleId(id));
+    }
+
     @PostMapping
     public Result<BlogArticle> create(@RequestBody BlogArticle article) {
         validateArticleForCreate(article);
         return Result.ok(blogArticleService.createArticle(article));
+    }
+
+    @PutMapping("/{id}/tags")
+    public Result<List<BlogTag>> updateTags(@PathVariable Long id, @RequestBody ArticleTagUpdateRequest request) {
+        validateArticleTagUpdateRequest(request);
+        return Result.ok(blogArticleTagService.replaceArticleTags(id, request.getTagIds()));
     }
 
     @PutMapping("/{id}")
@@ -113,6 +133,12 @@ public class BlogArticleController {
         String normalized = status.trim().toUpperCase();
         if (!"DRAFT".equals(normalized) && !"PUBLISHED".equals(normalized) && !"PRIVATE".equals(normalized)) {
             throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
+        }
+    }
+
+    private void validateArticleTagUpdateRequest(ArticleTagUpdateRequest request) {
+        if (request == null || request.getTagIds() == null) {
+            throw new IllegalArgumentException("tagIds must not be null");
         }
     }
 }

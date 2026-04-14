@@ -1,0 +1,103 @@
+package org.example.personalblogsystem.service.impl;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.entity.BlogArticleTag;
+import org.example.personalblogsystem.entity.BlogTag;
+import org.example.personalblogsystem.mapper.BlogArticleTagMapper;
+import org.example.personalblogsystem.mapper.BlogTagMapper;
+import org.example.personalblogsystem.mapper.SysUserMapper;
+import org.example.personalblogsystem.service.IBlogTagService;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+
+@Service
+public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> implements IBlogTagService {
+
+    private final SysUserMapper sysUserMapper;
+    private final BlogArticleTagMapper blogArticleTagMapper;
+
+    public BlogTagServiceImpl(SysUserMapper sysUserMapper,
+                              BlogArticleTagMapper blogArticleTagMapper) {
+        this.sysUserMapper = sysUserMapper;
+        this.blogArticleTagMapper = blogArticleTagMapper;
+    }
+
+    @Override
+    public Page<BlogTag> pageTags(long current, long size, String keyword) {
+        LambdaQueryWrapper<BlogTag> queryWrapper = new LambdaQueryWrapper<>();
+        if (keyword != null && !keyword.isBlank()) {
+            queryWrapper.and(wrapper -> wrapper.like(BlogTag::getTagName, keyword)
+                    .or()
+                    .like(BlogTag::getDescription, keyword));
+        }
+        queryWrapper.orderByDesc(BlogTag::getUpdateTime, BlogTag::getId);
+        return page(new Page<>(current, size), queryWrapper);
+    }
+
+    @Override
+    public BlogTag createTag(BlogTag tag) {
+        validateTagNameUnique(tag.getTagName(), null);
+        validateCreatedByExists(tag.getCreatedBy());
+
+        LocalDateTime now = LocalDateTime.now();
+        tag.setId(null);
+        tag.setCreateTime(now);
+        tag.setUpdateTime(now);
+        tag.setDeleted(false);
+        save(tag);
+        return getById(tag.getId());
+    }
+
+    @Override
+    public BlogTag updateTag(Long id, BlogTag tag) {
+        BlogTag existing = getById(id);
+        if (existing == null) {
+            return null;
+        }
+
+        validateTagNameUnique(tag.getTagName(), id);
+        existing.setTagName(tag.getTagName());
+        existing.setDescription(tag.getDescription());
+        existing.setUpdateTime(LocalDateTime.now());
+        return updateById(existing) ? getById(id) : null;
+    }
+
+    @Override
+    public boolean deleteTag(Long id) {
+        BlogTag existing = getById(id);
+        if (existing == null) {
+            return false;
+        }
+
+        Long articleTagCount = blogArticleTagMapper.selectCount(new LambdaQueryWrapper<BlogArticleTag>()
+                .eq(BlogArticleTag::getTagId, id)
+                .eq(BlogArticleTag::getDeleted, false));
+        if (articleTagCount != null && articleTagCount > 0) {
+            throw new IllegalArgumentException("tag is referenced by articles");
+        }
+
+        return removeById(id);
+    }
+
+    private void validateTagNameUnique(String tagName, Long currentTagId) {
+        LambdaQueryWrapper<BlogTag> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(BlogTag::getTagName, tagName);
+        if (currentTagId != null) {
+            queryWrapper.ne(BlogTag::getId, currentTagId);
+        }
+
+        Long duplicateCount = count(queryWrapper);
+        if (duplicateCount != null && duplicateCount > 0) {
+            throw new IllegalArgumentException("tagName already exists");
+        }
+    }
+
+    private void validateCreatedByExists(Long createdBy) {
+        if (createdBy == null || sysUserMapper.selectById(createdBy) == null) {
+            throw new IllegalArgumentException("createdBy does not exist");
+        }
+    }
+}

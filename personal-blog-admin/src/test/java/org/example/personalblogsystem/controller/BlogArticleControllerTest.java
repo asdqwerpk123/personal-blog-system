@@ -3,6 +3,7 @@ package org.example.personalblogsystem.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.mapper.BlogArticleMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +84,23 @@ class BlogArticleControllerTest {
                 .andExpect(jsonPath("$.data.records.length()").value(1))
                 .andExpect(jsonPath("$.data.records[0].id").value(2))
                 .andExpect(jsonPath("$.data.records[0].articleTitle").value("Vue Frontend Notes for Blog Project"));
+    }
+
+    @Test
+    void shouldReturnTagsForArticle() throws Exception {
+        mockMvc.perform(get("/admin/article/{id}/tags", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].tagName").value("SpringBoot"))
+                .andExpect(jsonPath("$.data[1].tagName").value("MySQL"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenGettingTagsForMissingArticle() throws Exception {
+        mockMvc.perform(get("/admin/article/{id}/tags", 999L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404));
     }
 
     @Test
@@ -203,6 +221,101 @@ class BlogArticleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("categoryId does not exist"));
+    }
+
+    @Test
+    void shouldReplaceArticleTags() throws Exception {
+        ArticleTagUpdateRequest request = new ArticleTagUpdateRequest();
+        request.setTagIds(java.util.List.of(2L, 4L, 4L));
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].tagName").value("Vue"))
+                .andExpect(jsonPath("$.data[1].tagName").value("Study"));
+    }
+
+    @Test
+    void shouldClearArticleTagsWhenRequestContainsEmptyList() throws Exception {
+        ArticleTagUpdateRequest request = new ArticleTagUpdateRequest();
+        request.setTagIds(java.util.List.of());
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 3L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(0));
+
+        Integer activeRelationCount = jdbcTemplate.queryForObject(
+                "select count(*) from blog_article_tag where article_id = ? and deleted = 0",
+                Integer.class,
+                3L);
+        assertThat(activeRelationCount).isZero();
+    }
+
+    @Test
+    void shouldRestoreSoftDeletedArticleTagRelation() throws Exception {
+        ArticleTagUpdateRequest removeRequest = new ArticleTagUpdateRequest();
+        removeRequest.setTagIds(java.util.List.of(1L));
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(removeRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        ArticleTagUpdateRequest restoreRequest = new ArticleTagUpdateRequest();
+        restoreRequest.setTagIds(java.util.List.of(1L, 3L));
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(restoreRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(2));
+
+        Integer relationCount = jdbcTemplate.queryForObject(
+                "select count(*) from blog_article_tag where article_id = ? and tag_id = ?",
+                Integer.class,
+                1L,
+                3L);
+        Integer deletedFlag = jdbcTemplate.queryForObject(
+                "select deleted from blog_article_tag where article_id = ? and tag_id = ?",
+                Integer.class,
+                1L,
+                3L);
+        assertThat(relationCount).isEqualTo(1);
+        assertThat(deletedFlag).isZero();
+    }
+
+    @Test
+    void shouldRejectReplacingTagsWhenArticleDoesNotExist() throws Exception {
+        ArticleTagUpdateRequest request = new ArticleTagUpdateRequest();
+        request.setTagIds(java.util.List.of(1L));
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("articleId does not exist"));
+    }
+
+    @Test
+    void shouldRejectReplacingTagsWhenTagDoesNotExist() throws Exception {
+        ArticleTagUpdateRequest request = new ArticleTagUpdateRequest();
+        request.setTagIds(java.util.List.of(999L));
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("tagId does not exist: 999"));
     }
 
     @Test
