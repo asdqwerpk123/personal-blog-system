@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/admin/article")
@@ -130,7 +131,7 @@ public class BlogArticleController {
             throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
         }
 
-        String normalized = status.trim().toUpperCase();
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
         if (!"DRAFT".equals(normalized) && !"PUBLISHED".equals(normalized) && !"PRIVATE".equals(normalized)) {
             throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
         }

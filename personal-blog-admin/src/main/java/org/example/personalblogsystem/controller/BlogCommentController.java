@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/admin/comment")
@@ -79,7 +80,7 @@ public class BlogCommentController {
             throw new IllegalArgumentException("status must be one of PENDING, APPROVED, REJECTED");
         }
 
-        String normalized = status.trim().toUpperCase();
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
         if (!"PENDING".equals(normalized) && !"APPROVED".equals(normalized) && !"REJECTED".equals(normalized)) {
             throw new IllegalArgumentException("status must be one of PENDING, APPROVED, REJECTED");
         }

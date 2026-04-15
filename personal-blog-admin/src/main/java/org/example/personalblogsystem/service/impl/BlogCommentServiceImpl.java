@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComment> implements IBlogCommentService {
@@ -78,7 +79,7 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
     }
 
     private String normalizeStatus(String status) {
-        String normalized = status == null ? "" : status.trim().toUpperCase();
+        String normalized = status == null ? "" : status.trim().toUpperCase(Locale.ROOT);
         if (!"PENDING".equals(normalized) && !"APPROVED".equals(normalized) && !"REJECTED".equals(normalized)) {
             throw new IllegalArgumentException("status must be one of PENDING, APPROVED, REJECTED");
         }

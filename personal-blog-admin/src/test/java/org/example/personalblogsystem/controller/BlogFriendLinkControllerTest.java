@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -177,6 +178,21 @@ class BlogFriendLinkControllerTest {
     }
 
     @Test
+    void shouldAcceptLowercaseLinkStatusInTurkishLocaleOnCreate() throws Exception {
+        withLocale(new Locale("tr", "TR"), () -> mockMvc.perform(post("/admin/friend-link")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
+                                randomUrl(),
+                                "https://example.com/logo.png",
+                                "Temporary friend link",
+                                "approved",
+                                2L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.linkStatus").value("APPROVED")));
+    }
+
+    @Test
     void shouldCreateUpdateAndDeleteFriendLink() throws Exception {
         String siteUrl = randomUrl();
         Map<String, Object> request = friendLinkRequest("Temp Link",
@@ -276,5 +292,20 @@ class BlogFriendLinkControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private void withLocale(Locale locale, ThrowingRunnable action) throws Exception {
+        Locale previous = Locale.getDefault();
+        Locale.setDefault(locale);
+        try {
+            action.run();
+        } finally {
+            Locale.setDefault(previous);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
     }
 }

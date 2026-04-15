@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Locale;
+
 @RestController
 @RequestMapping("/admin/friend-link")
 public class BlogFriendLinkController {
@@ -100,7 +102,7 @@ public class BlogFriendLinkController {
             return;
         }
 
-        String normalized = status.trim().toUpperCase();
+        String normalized = status.trim().toUpperCase(Locale.ROOT);
         if (!"PENDING".equals(normalized) && !"APPROVED".equals(normalized) && !"REJECTED".equals(normalized)) {
             throw new IllegalArgumentException("linkStatus must be one of PENDING, APPROVED, REJECTED");
         }

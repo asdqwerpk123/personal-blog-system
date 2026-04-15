@@ -9,6 +9,7 @@ import org.example.personalblogsystem.mapper.BlogArticleTagMapper;
 import org.example.personalblogsystem.mapper.BlogTagMapper;
 import org.example.personalblogsystem.service.IBlogArticleTagService;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,6 +38,7 @@ public class BlogArticleTagServiceImpl extends ServiceImpl<BlogArticleTagMapper,
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public List<BlogTag> replaceArticleTags(Long articleId, List<Long> tagIds) {
         validateArticleExists(articleId);
         List<Long> normalizedTagIds = normalizeTagIds(tagIds);

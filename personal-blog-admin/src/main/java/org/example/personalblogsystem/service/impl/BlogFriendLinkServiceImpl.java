@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 @Service
 public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper, BlogFriendLink> implements IBlogFriendLinkService {
@@ -186,7 +187,7 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
             throw new IllegalArgumentException("linkStatus must be one of PENDING, APPROVED, REJECTED");
         }
 
-        String normalized = value.toUpperCase();
+        String normalized = value.toUpperCase(Locale.ROOT);
         if (!"PENDING".equals(normalized) && !"APPROVED".equals(normalized) && !"REJECTED".equals(normalized)) {
             throw new IllegalArgumentException("linkStatus must be one of PENDING, APPROVED, REJECTED");
         }

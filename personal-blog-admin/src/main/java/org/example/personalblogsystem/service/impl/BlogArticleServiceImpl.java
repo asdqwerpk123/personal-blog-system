@@ -13,7 +13,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 /**
  * <p>
@@ -63,7 +65,11 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         article.setCreateTime(now);
         article.setUpdateTime(now);
         article.setDeleted(false);
-        save(article);
+        try {
+            save(article);
+        } catch (DataAccessException exception) {
+            throw translateDuplicateArticleSlugException(exception);
+        }
         return getById(article.getId());
     }
 
@@ -85,7 +91,11 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         existing.setTopFlag(article.getTopFlag() == null ? existing.getTopFlag() : article.getTopFlag());
         existing.setAllowComment(article.getAllowComment() == null ? existing.getAllowComment() : article.getAllowComment());
         existing.setUpdateTime(LocalDateTime.now());
-        return updateById(existing) ? getById(id) : null;
+        try {
+            return updateById(existing) ? getById(id) : null;
+        } catch (DataAccessException exception) {
+            throw translateDuplicateArticleSlugException(exception);
+        }
     }
 
     @Override
@@ -125,7 +135,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             return defaultStatus;
         }
 
-        String normalized = value.toUpperCase();
+        String normalized = value.toUpperCase(Locale.ROOT);
         if (!"DRAFT".equals(normalized) && !"PUBLISHED".equals(normalized) && !"PRIVATE".equals(normalized)) {
             throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
         }
@@ -174,5 +184,40 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             root = root.getCause();
         }
         return root.getMessage();
+    }
+
+    private IllegalArgumentException translateDuplicateArticleSlugException(DataAccessException exception) {
+        if (isDuplicateConstraintViolation(exception)) {
+            return new IllegalArgumentException("articleSlug already exists");
+        }
+        throw exception;
+    }
+
+    private boolean isDuplicateConstraintViolation(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null && current.getCause() != current) {
+            if (current instanceof SQLException sqlException) {
+                if (sqlException.getErrorCode() == 1062) {
+                    return true;
+                }
+                String sqlState = sqlException.getSQLState();
+                if ("23505".equals(sqlState)) {
+                    return true;
+                }
+            }
+            String message = current.getMessage();
+            if (message != null) {
+                String normalizedMessage = message.toLowerCase(Locale.ROOT);
+                if (normalizedMessage.contains("duplicate entry")
+                        || normalizedMessage.contains("duplicate key")
+                        || normalizedMessage.contains("unique constraint")
+                        || normalizedMessage.contains("unique index")
+                        || normalizedMessage.contains("unique key")) {
+                    return true;
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 }

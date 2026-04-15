@@ -2,25 +2,34 @@ package org.example.personalblogsystem.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.mapper.BlogArticleMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.util.Locale;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -36,7 +45,7 @@ class BlogArticleControllerTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    @Autowired
+    @MockitoSpyBean
     private BlogArticleMapper blogArticleMapper;
 
     @Autowired
@@ -49,6 +58,11 @@ class BlogArticleControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        reset(blogArticleMapper);
     }
 
     @Test
@@ -136,6 +150,15 @@ class BlogArticleControllerTest {
     }
 
     @Test
+    void shouldAcceptLowercaseArticleStatusInTurkishLocale() throws Exception {
+        withLocale(new Locale("tr", "TR"), () -> mockMvc.perform(put("/admin/article/{id}/status", 1L)
+                        .param("status", "private"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.articleStatus").value("PRIVATE")));
+    }
+
+    @Test
     void shouldRejectInvalidArticlePageCurrent() throws Exception {
         mockMvc.perform(get("/admin/article/page")
                         .param("current", "0")
@@ -158,6 +181,24 @@ class BlogArticleControllerTest {
     @Test
     void shouldRejectDuplicateSlugOnCreate() throws Exception {
         BlogArticle article = buildArticle("Duplicate slug", "build-personal-blog-with-spring-boot", "draft content", 5L);
+
+        mockMvc.perform(post("/admin/article")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(article)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("articleSlug already exists"));
+    }
+
+    @Test
+    void shouldTranslateDuplicateKeyFailureOnCreateToBadRequest() throws Exception {
+        doThrow(duplicateConstraintViolation())
+                .when(blogArticleMapper)
+                .insert(any(BlogArticle.class));
+
+        BlogArticle article = buildArticle("Forced duplicate", randomSlug(), "draft content", 5L);
+        article.setArticleSummary("summary");
+        article.setCategoryId(1L);
 
         mockMvc.perform(post("/admin/article")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -195,6 +236,45 @@ class BlogArticleControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("articleSlug already exists"));
+    }
+
+    @Test
+    void shouldTranslateDuplicateKeyFailureOnUpdateToBadRequest() throws Exception {
+        BlogArticle updateRequest = buildArticle(
+                "Updated title",
+                randomSlug(),
+                "Updated content",
+                5L);
+        updateRequest.setArticleSummary("Updated summary");
+        updateRequest.setCategoryId(1L);
+
+        doThrow(duplicateConstraintViolation())
+                .when(blogArticleMapper)
+                .updateById(any(BlogArticle.class));
+
+        mockMvc.perform(put("/admin/article/{id}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("articleSlug already exists"));
+    }
+
+    @Test
+    void shouldNotTranslateNonDuplicateConstraintFailureToDuplicateMessage() throws Exception {
+        doThrow(nonDuplicateConstraintViolation())
+                .when(blogArticleMapper)
+                .insert(any(BlogArticle.class));
+
+        BlogArticle article = buildArticle("Foreign key failure", randomSlug(), "draft content", 5L);
+        article.setArticleSummary("summary");
+        article.setCategoryId(1L);
+
+        mockMvc.perform(post("/admin/article")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(article)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCodeEnum.SYSTEM_ERROR.getCode()));
     }
 
     @Test
@@ -467,5 +547,38 @@ class BlogArticleControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private DataIntegrityViolationException duplicateConstraintViolation() {
+        return new DataIntegrityViolationException(
+                "translated integrity constraint failure",
+                new SQLIntegrityConstraintViolationException(
+                        "Integrity constraint violation",
+                        "23000",
+                        1062));
+    }
+
+    private DataIntegrityViolationException nonDuplicateConstraintViolation() {
+        return new DataIntegrityViolationException(
+                "translated foreign key failure",
+                new SQLIntegrityConstraintViolationException(
+                        "Cannot add or update a child row: a foreign key constraint fails",
+                        "23000",
+                        1452));
+    }
+
+    private void withLocale(Locale locale, ThrowingRunnable action) throws Exception {
+        Locale previous = Locale.getDefault();
+        Locale.setDefault(locale);
+        try {
+            action.run();
+        } finally {
+            Locale.setDefault(previous);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
     }
 }

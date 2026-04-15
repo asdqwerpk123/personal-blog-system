@@ -5,20 +5,28 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.mapper.BlogTagMapper;
+import org.example.personalblogcommon.result.ResultCodeEnum;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -34,7 +42,7 @@ class BlogTagControllerTest {
     @Autowired
     private WebApplicationContext webApplicationContext;
 
-    @Autowired
+    @MockitoSpyBean
     private BlogTagMapper blogTagMapper;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -44,6 +52,11 @@ class BlogTagControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        reset(blogTagMapper);
     }
 
     @Test
@@ -151,6 +164,61 @@ class BlogTagControllerTest {
     }
 
     @Test
+    void shouldTranslateDuplicateKeyFailureOnCreateToBadRequest() throws Exception {
+        doThrow(duplicateConstraintViolation())
+                .when(blogTagMapper)
+                .insert(any(BlogTag.class));
+
+        BlogTag tag = new BlogTag();
+        tag.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
+        tag.setDescription("temp");
+        tag.setCreatedBy(2L);
+
+        mockMvc.perform(post("/admin/tag")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(tag)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("tagName already exists"));
+    }
+
+    @Test
+    void shouldTranslateDuplicateKeyFailureOnUpdateToBadRequest() throws Exception {
+        BlogTag updateRequest = new BlogTag();
+        updateRequest.setTagName("SpringBoot-updated");
+        updateRequest.setDescription("updated");
+
+        doThrow(duplicateConstraintViolation())
+                .when(blogTagMapper)
+                .updateById(any(BlogTag.class));
+
+        mockMvc.perform(put("/admin/tag/{id}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("tagName already exists"));
+    }
+
+    @Test
+    void shouldNotTranslateNonDuplicateConstraintFailureToDuplicateMessage() throws Exception {
+        doThrow(nonDuplicateConstraintViolation())
+                .when(blogTagMapper)
+                .insert(any(BlogTag.class));
+
+        BlogTag tag = new BlogTag();
+        tag.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
+        tag.setDescription("temp");
+        tag.setCreatedBy(2L);
+
+        mockMvc.perform(post("/admin/tag")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(tag)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(ResultCodeEnum.SYSTEM_ERROR.getCode()));
+    }
+
+    @Test
     void shouldCreateUpdateAndDeleteTag() throws Exception {
         BlogTag created = new BlogTag();
         created.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
@@ -221,5 +289,23 @@ class BlogTagControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private DataIntegrityViolationException duplicateConstraintViolation() {
+        return new DataIntegrityViolationException(
+                "translated integrity constraint failure",
+                new SQLIntegrityConstraintViolationException(
+                        "Integrity constraint violation",
+                        "23000",
+                        1062));
+    }
+
+    private DataIntegrityViolationException nonDuplicateConstraintViolation() {
+        return new DataIntegrityViolationException(
+                "translated foreign key failure",
+                new SQLIntegrityConstraintViolationException(
+                        "Cannot add or update a child row: a foreign key constraint fails",
+                        "23000",
+                        1452));
     }
 }

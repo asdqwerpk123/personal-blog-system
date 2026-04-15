@@ -23,6 +23,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Locale;
+
 @SpringBootTest(classes = PersonalBlogSystemApplication.class,
         properties = "spring.profiles.active=test")
 @Transactional
@@ -130,6 +132,15 @@ class BlogCommentControllerTest {
     }
 
     @Test
+    void shouldAcceptLowercaseCommentStatusInTurkishLocale() throws Exception {
+        withLocale(new Locale("tr", "TR"), () -> mockMvc.perform(put("/admin/comment/{id}/status", 3L)
+                        .param("status", "approved"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.commentStatus").value("APPROVED")));
+    }
+
+    @Test
     void shouldUpdateCommentStatus() throws Exception {
         mockMvc.perform(put("/admin/comment/{id}/status", 3L)
                         .param("status", "REJECTED"))
@@ -186,5 +197,20 @@ class BlogCommentControllerTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString());
+    }
+
+    private void withLocale(Locale locale, ThrowingRunnable action) throws Exception {
+        Locale previous = Locale.getDefault();
+        Locale.setDefault(locale);
+        try {
+            action.run();
+        } finally {
+            Locale.setDefault(previous);
+        }
+    }
+
+    @FunctionalInterface
+    private interface ThrowingRunnable {
+        void run() throws Exception;
     }
 }
