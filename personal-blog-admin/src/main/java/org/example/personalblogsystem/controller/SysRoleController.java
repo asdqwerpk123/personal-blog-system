@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/admin/role")
 public class SysRoleController {
@@ -23,5 +25,10 @@ public class SysRoleController {
     public Result<SysRole> getById(@PathVariable Long id) {
         SysRole role = sysRoleService.getById(id);
         return role == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(role);
+    }
+
+    @GetMapping("/list")
+    public Result<List<SysRole>> list() {
+        return Result.ok(sysRoleService.listRoles());
     }
 }

@@ -2,6 +2,7 @@ package org.example.personalblogsystem.service;
 
 import org.example.personalblogsystem.entity.SysRole;
 import com.baomidou.mybatisplus.extension.service.IService;
+import java.util.List;
 
 /**
  * <p>
@@ -12,5 +13,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @since 2026-03-31
  */
 public interface ISysRoleService extends IService<SysRole> {
+
+    List<SysRole> listRoles();
 
 }

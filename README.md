@@ -4,10 +4,13 @@
 
 `personal-blog-system` 是一个基于 `Java 17`、`Spring Boot 4.0.3` 和 `Maven` 构建的多模块个人博客系统后端项目。
 
-当前仓库已经完成了两部分基础建设：
+当前仓库已经完成了课程设计可演示的后台 MVP：
 
 1. Maven 父子模块结构搭建
 2. MySQL 数据库设计与后端基础设施接入
+3. P0 核心管理接口与 OpenAPI 文档
+4. P1 标签、文章标签关联、评论管理
+5. P2 友情链接、操作日志分页、最小登录接口
 
 项目适合作为 `Web 应用实训`、课程设计、Spring Boot 入门练习以及后续博客系统功能扩展的基础工程。
 
@@ -91,22 +94,29 @@ personal-blog-system
 - 已整合 `Druid` 数据源与监控
 - 已完成 `dev / test / prod` 多环境数据源配置
 
-### 3. 代码生成
+### 3. 后台接口能力
 
-已基于 MyBatis-Plus 代码生成器生成以下核心表对应代码：
+当前已经完成的后台接口包括：
 
-- `sys_user`
-- `sys_role`
-- `blog_article`
-- `blog_category`
+- 用户：`GET /admin/user/{id}`、`GET /admin/user/page`
+- 角色：`GET /admin/role/{id}`、`GET /admin/role/list`
+- 分类：`GET /admin/category/{id}`、`GET /admin/category/list`、`GET /admin/category/page`、`POST /admin/category`、`PUT /admin/category/{id}`、`DELETE /admin/category/{id}`
+- 文章：`GET /admin/article/{id}`、`GET /admin/article/page`、`POST /admin/article`、`PUT /admin/article/{id}`、`PUT /admin/article/{id}/status`、`DELETE /admin/article/{id}`
+- 标签：`GET /admin/tag/page`、`POST /admin/tag`、`PUT /admin/tag/{id}`、`DELETE /admin/tag/{id}`
+- 文章标签：`GET /admin/article/{id}/tags`、`PUT /admin/article/{id}/tags`
+- 评论：`GET /admin/comment/page`、`GET /admin/comment/article/{articleId}`、`PUT /admin/comment/{id}/status`、`DELETE /admin/comment/{id}`
+- 友情链接：`GET /admin/friend-link/page`、`POST /admin/friend-link`、`PUT /admin/friend-link/{id}`、`DELETE /admin/friend-link/{id}`
+- 操作日志：`GET /admin/operation-log/page`
+- 最小登录：`POST /admin/auth/login`
 
-### 4. 测试验证
+### 4. 文档与测试验证
 
 当前已经验证通过：
 
 - 数据库连接测试
-- `Mapper` 基础 CRUD 测试
-- `Controller` 返回结构测试
+- `Mapper` / `Service` / `Controller` 主要用例测试
+- OpenAPI 运行时文档：`/v3/api-docs`
+- Swagger UI：`/swagger-ui/index.html`
 - 整仓 `./mvnw.cmd test`
 - Druid 监控页访问验证
 
@@ -286,9 +296,11 @@ SQL 文件中包含多个触发器和存储过程，主要作用有：
 
 - MyBatis-Plus 接入
 - Druid 数据源与监控接入
-- 核心表代码生成
-- 基础控制器、Mapper、Service 骨架
-- 数据库连接与 CRUD 测试
+- OpenAPI / Swagger 文档
+- 用户、角色、分类、文章后台接口
+- 标签、文章标签、评论后台接口
+- 友情链接、操作日志分页、最小登录接口
+- 数据库连接与 CRUD / 接口测试
 
 ## Druid 监控页
 
@@ -307,31 +319,36 @@ password: admin123
 
 当前项目已经验证 `/druid` 入口可以正常跳转到监控登录页。
 
-## 当前代码生成范围
+## 当前实现范围
 
-本阶段仅生成并整理以下四张核心表对应代码：
+当前仓库已经覆盖以下业务表对应的后台代码：
 
 - `sys_user`
 - `sys_role`
-- `blog_article`
 - `blog_category`
-
-暂未生成：
-
+- `blog_article`
 - `blog_tag`
+- `blog_article_tag`
 - `blog_comment`
 - `blog_friend_link`
 - `sys_operation_log`
+
+其中：
+
+- P0 重点解决项目启动、统一返回、分页与 OpenAPI 文档
+- P1 补齐标签、文章标签关联、评论管理
+- P2 补齐友情链接、操作日志分页、最小登录接口
+- P2 仍然没有引入 JWT、Spring Security、全局鉴权拦截
 
 ## 后续开发建议
 
 后续可以继续补充：
 
-- 登录注册与权限校验
-- 文章、分类、标签、评论接口
-- 管理端分页查询
-- 统一参数校验
-- Swagger / OpenAPI 文档
+- 登录后的鉴权拦截与权限控制
+- 前台博客站点接口
+- 更完整的参数校验与请求 DTO
+- 操作日志的更多查询维度
+- 友情链接审核流与展示页联调
 - Vue 前端联调
 
 ## 作者说明
