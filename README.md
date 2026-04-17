@@ -188,6 +188,7 @@ sql/personal_blog_system.sql
 - `BLOG_DB_PROD_URL`
 - `BLOG_DB_PROD_USERNAME`
 - `BLOG_DB_PROD_PASSWORD`
+- `BLOG_SERVER_PORT`
 
 本地默认开发环境配置等价于：
 
@@ -196,6 +197,16 @@ jdbc:mysql://localhost:3306/personal_blog_system?useUnicode=true&characterEncodi
 username=root
 password=123456
 ```
+
+开发启动时请显式指定 `dev` profile，避免依赖任何隐式默认值：
+
+```bash
+./mvnw.cmd -pl personal-blog-admin spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+`test` profile 使用独立测试库契约，不再继承或回退到 `dev` 数据源配置。运行测试前，请先准备单独的测试 schema，并设置完整的 `BLOG_DB_TEST_URL`、`BLOG_DB_TEST_USERNAME`、`BLOG_DB_TEST_PASSWORD`。
+
+详细初始化步骤、PowerShell 示例命令、IDEA / Maven 注意事项和常见报错说明见 [docs/test-environment.md](docs/test-environment.md)。
 
 ### 5. 启动项目
 
@@ -208,8 +219,10 @@ org.example.personalblogsystem.PersonalBlogSystemApplication
 在项目根目录执行：
 
 ```bash
-./mvnw.cmd -pl personal-blog-admin spring-boot:run
+./mvnw.cmd -pl personal-blog-admin spring-boot:run -Dspring-boot.run.profiles=dev
 ```
+
+项目默认启动端口为 `8081`。如果后续需要临时切换端口，可通过环境变量 `BLOG_SERVER_PORT` 覆盖。
 
 ### 6. 运行测试
 
@@ -218,6 +231,17 @@ org.example.personalblogsystem.PersonalBlogSystemApplication
 ```bash
 ./mvnw.cmd test
 ```
+
+PowerShell 当前会话最小示例：
+
+```powershell
+$env:BLOG_DB_TEST_URL='jdbc:mysql://localhost:3306/personal_blog_system_test?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false'
+$env:BLOG_DB_TEST_USERNAME='root'
+$env:BLOG_DB_TEST_PASSWORD='123456'
+./mvnw.cmd test
+```
+
+如果缺少任一 `BLOG_DB_TEST_*` 变量，测试会在 Spring Boot 启动阶段按设计快速失败，而不是回退到开发库。
 
 构建整个父子模块项目：
 
@@ -307,7 +331,7 @@ SQL 文件中包含多个触发器和存储过程，主要作用有：
 启动 `personal-blog-admin` 后访问：
 
 ```text
-http://localhost:8080/druid
+http://localhost:8081/druid
 ```
 
 默认开发环境账号：
