@@ -2,13 +2,16 @@ package org.example.personalblogsystem.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.auth.AdminAuthPrincipal;
 import org.example.personalblogsystem.dto.LoginRequest;
+import org.example.personalblogsystem.auth.JwtTokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,9 @@ class AuthControllerTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private JwtTokenService jwtTokenService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MockMvc mockMvc;
@@ -40,7 +46,7 @@ class AuthControllerTest {
 
     @Test
     void shouldLoginWithValidCredentials() throws Exception {
-        mockMvc.perform(post("/admin/auth/login")
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest("root", "123456"))))
                 .andExpect(status().isOk())
@@ -52,7 +58,18 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.roleCode").value("SUPER_ADMIN"))
                 .andExpect(jsonPath("$.data.roleName").value("\u8D85\u7EA7\u7BA1\u7406\u5458"))
                 .andExpect(jsonPath("$.data.userStatus").value("ENABLED"))
-                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.expiresAt").isNotEmpty())
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist())
+                .andReturn();
+
+        String token = objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("accessToken").asText();
+        AdminAuthPrincipal principal = jwtTokenService.parseAccessToken(token);
+        org.assertj.core.api.Assertions.assertThat(principal.getUserId()).isEqualTo(1L);
+        org.assertj.core.api.Assertions.assertThat(principal.getUserName()).isEqualTo("root");
+        org.assertj.core.api.Assertions.assertThat(principal.getRoleId()).isEqualTo(1L);
+        org.assertj.core.api.Assertions.assertThat(principal.getRoleCode()).isEqualTo("SUPER_ADMIN");
     }
 
     @Test

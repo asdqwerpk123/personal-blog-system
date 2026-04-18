@@ -3,6 +3,7 @@ package org.example.personalblogsystem.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.entity.BlogComment;
 import org.example.personalblogsystem.mapper.BlogCommentMapper;
 import org.example.personalblogsystem.service.IBlogCommentService;
@@ -60,13 +61,14 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
     }
 
     @Override
-    public boolean deleteComment(Long id, Long operatorUserId) {
+    public boolean deleteComment(Long id) {
         BlogComment existing = getById(id);
         if (existing == null) {
             return false;
         }
 
         try {
+            Long operatorUserId = AdminAuthContext.requireCurrentUser().getUserId();
             jdbcTemplate.update("CALL sp_delete_comment(?, ?)", operatorUserId, id);
             return true;
         } catch (DataAccessException exception) {

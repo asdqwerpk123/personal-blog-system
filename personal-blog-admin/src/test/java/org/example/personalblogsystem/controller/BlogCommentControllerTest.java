@@ -3,6 +3,7 @@ package org.example.personalblogsystem.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogComment;
 import org.example.personalblogsystem.mapper.BlogCommentMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -123,8 +125,21 @@ class BlogCommentControllerTest {
     }
 
     @Test
+    void shouldRejectUnauthenticatedCommentWriteEndpoints() throws Exception {
+        mockMvc.perform(put("/admin/comment/{id}/status", 1L)
+                        .param("status", "APPROVED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+
+        mockMvc.perform(delete("/admin/comment/{id}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
     void shouldRejectInvalidCommentStatusUpdate() throws Exception {
         mockMvc.perform(put("/admin/comment/{id}/status", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "ARCHIVED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
@@ -134,6 +149,7 @@ class BlogCommentControllerTest {
     @Test
     void shouldAcceptLowercaseCommentStatusInTurkishLocale() throws Exception {
         withLocale(new Locale("tr", "TR"), () -> mockMvc.perform(put("/admin/comment/{id}/status", 3L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "approved"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -143,6 +159,7 @@ class BlogCommentControllerTest {
     @Test
     void shouldUpdateCommentStatus() throws Exception {
         mockMvc.perform(put("/admin/comment/{id}/status", 3L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "REJECTED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -156,15 +173,16 @@ class BlogCommentControllerTest {
     @Test
     void shouldReturnNotFoundWhenUpdatingMissingComment() throws Exception {
         mockMvc.perform(put("/admin/comment/{id}/status", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "APPROVED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
 
     @Test
-    void shouldDeleteCommentThroughStoredProcedure() throws Exception {
+    void shouldDeleteCommentUsingAuthenticatedOperator() throws Exception {
         mockMvc.perform(delete("/admin/comment/{id}", 3L)
-                        .param("operatorUserId", "5"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -178,18 +196,38 @@ class BlogCommentControllerTest {
     @Test
     void shouldReturnNotFoundWhenDeletingMissingComment() throws Exception {
         mockMvc.perform(delete("/admin/comment/{id}", 999L)
-                        .param("operatorUserId", "5"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
 
     @Test
-    void shouldRejectDeletingOthersCommentWhenOperatorIsNormalUser() throws Exception {
+    void shouldRejectDeletingOthersCommentWhenAuthenticatedOperatorIsNormalUser() throws Exception {
         mockMvc.perform(delete("/admin/comment/{id}", 1L)
-                        .param("operatorUserId", "5"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("Normal user can only delete own comment."));
+    }
+
+    private String loginAndGetAccessToken(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
+                        .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data")
+                .path("accessToken")
+                .asText();
+    }
+
+    private LoginRequest loginRequest(String userName, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUserName(userName);
+        request.setPassword(password);
+        return request;
     }
 
     private JsonNode performJson(org.springframework.test.web.servlet.RequestBuilder requestBuilder) throws Exception {

@@ -3,6 +3,8 @@ package org.example.personalblogsystem.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.auth.AdminAuthContext;
+import org.example.personalblogsystem.auth.AdminAuthPrincipal;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.mapper.BlogArticleMapper;
@@ -54,6 +56,8 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
 
     @Override
     public BlogArticle createArticle(BlogArticle article) {
+        AdminAuthPrincipal currentUser = AdminAuthContext.requireCurrentUser();
+        article.setAuthorId(currentUser.getUserId());
         validateArticleReferences(article, null);
         LocalDateTime now = LocalDateTime.now();
         article.setId(null);
@@ -80,13 +84,13 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             return null;
         }
 
+        article.setAuthorId(existing.getAuthorId());
         validateArticleReferences(article, id);
         existing.setArticleTitle(article.getArticleTitle());
         existing.setArticleSlug(article.getArticleSlug());
         existing.setArticleSummary(article.getArticleSummary());
         existing.setCoverUrl(article.getCoverUrl());
         existing.setArticleContent(article.getArticleContent());
-        existing.setAuthorId(article.getAuthorId());
         existing.setCategoryId(article.getCategoryId());
         existing.setTopFlag(article.getTopFlag() == null ? existing.getTopFlag() : article.getTopFlag());
         existing.setAllowComment(article.getAllowComment() == null ? existing.getAllowComment() : article.getAllowComment());
@@ -111,14 +115,15 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     }
 
     @Override
-    public boolean deleteArticle(Long id, Long operatorUserId) {
+    public boolean deleteArticle(Long id) {
         BlogArticle existing = getById(id);
         if (existing == null) {
             return false;
         }
 
         try {
-            jdbcTemplate.update("CALL sp_delete_article(?, ?)", operatorUserId, id);
+            AdminAuthPrincipal currentUser = AdminAuthContext.requireCurrentUser();
+            jdbcTemplate.update("CALL sp_delete_article(?, ?)", currentUser.getUserId(), id);
             return true;
         } catch (DataAccessException exception) {
             String message = getRootMessage(exception);

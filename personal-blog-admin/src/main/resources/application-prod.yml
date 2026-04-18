@@ -18,3 +18,9 @@ mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
+blog:
+  auth:
+    allowed-origins: ${BLOG_ADMIN_ALLOWED_ORIGINS}
+    jwt:
+      secret: ${BLOG_ADMIN_JWT_SECRET}
+      access-token-expire-minutes: ${BLOG_ADMIN_JWT_ACCESS_TOKEN_EXPIRE_MINUTES:120}

@@ -24,3 +24,9 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+blog:
+  auth:
+    allowed-origins: ${BLOG_ADMIN_ALLOWED_ORIGINS:http://localhost:5173}
+    jwt:
+      secret: ${BLOG_ADMIN_JWT_SECRET:change-me-for-real-use-please-32-bytes}
+      access-token-expire-minutes: ${BLOG_ADMIN_JWT_ACCESS_TOKEN_EXPIRE_MINUTES:120}
