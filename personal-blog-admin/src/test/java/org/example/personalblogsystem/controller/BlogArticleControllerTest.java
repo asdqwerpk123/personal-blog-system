@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
+import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.mapper.BlogArticleMapper;
 import org.junit.jupiter.api.AfterEach;
@@ -118,10 +119,62 @@ class BlogArticleControllerTest {
     }
 
     @Test
+    void shouldRejectUnauthenticatedCreate() throws Exception {
+        BlogArticle article = buildArticle("Unauth create", randomSlug(), "draft content", 5L);
+        article.setCategoryId(1L);
+
+        mockMvc.perform(post("/admin/article")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(article)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedUpdate() throws Exception {
+        BlogArticle article = buildArticle("Unauth update", randomSlug(), "draft content", 5L);
+        article.setCategoryId(1L);
+
+        mockMvc.perform(put("/admin/article/{id}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(article)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedStatusUpdate() throws Exception {
+        mockMvc.perform(put("/admin/article/{id}/status", 1L)
+                        .param("status", "PUBLISHED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedTagUpdate() throws Exception {
+        ArticleTagUpdateRequest request = new ArticleTagUpdateRequest();
+        request.setTagIds(java.util.List.of(1L));
+
+        mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedDelete() throws Exception {
+        mockMvc.perform(delete("/admin/article/{id}", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
     void shouldRejectBlankArticleTitleOnCreate() throws Exception {
         BlogArticle article = buildArticle("   ", randomSlug(), "draft content", 5L);
 
         mockMvc.perform(post("/admin/article")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
@@ -134,6 +187,7 @@ class BlogArticleControllerTest {
         BlogArticle article = buildArticle("Missing", randomSlug(), "draft content", 5L);
 
         mockMvc.perform(put("/admin/article/{id}", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
@@ -143,6 +197,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldRejectInvalidArticleStatusUpdate() throws Exception {
         mockMvc.perform(put("/admin/article/{id}/status", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "ARCHIVED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
@@ -152,6 +207,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldAcceptLowercaseArticleStatusInTurkishLocale() throws Exception {
         withLocale(new Locale("tr", "TR"), () -> mockMvc.perform(put("/admin/article/{id}/status", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "private"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
@@ -183,6 +239,7 @@ class BlogArticleControllerTest {
         BlogArticle article = buildArticle("Duplicate slug", "build-personal-blog-with-spring-boot", "draft content", 5L);
 
         mockMvc.perform(post("/admin/article")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
@@ -193,14 +250,14 @@ class BlogArticleControllerTest {
     @Test
     void shouldTranslateDuplicateKeyFailureOnCreateToBadRequest() throws Exception {
         doThrow(duplicateConstraintViolation())
-                .when(blogArticleMapper)
-                .insert(any(BlogArticle.class));
+                .when(blogArticleMapper).insert(any(BlogArticle.class));
 
         BlogArticle article = buildArticle("Forced duplicate", randomSlug(), "draft content", 5L);
         article.setArticleSummary("summary");
         article.setCategoryId(1L);
 
         mockMvc.perform(post("/admin/article")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
@@ -231,6 +288,7 @@ class BlogArticleControllerTest {
         updateRequest.setAllowComment(true);
 
         mockMvc.perform(put("/admin/article/{id}", articleId)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -249,10 +307,10 @@ class BlogArticleControllerTest {
         updateRequest.setCategoryId(1L);
 
         doThrow(duplicateConstraintViolation())
-                .when(blogArticleMapper)
-                .updateById(any(BlogArticle.class));
+                .when(blogArticleMapper).updateById(any(BlogArticle.class));
 
         mockMvc.perform(put("/admin/article/{id}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -263,14 +321,14 @@ class BlogArticleControllerTest {
     @Test
     void shouldNotTranslateNonDuplicateConstraintFailureToDuplicateMessage() throws Exception {
         doThrow(nonDuplicateConstraintViolation())
-                .when(blogArticleMapper)
-                .insert(any(BlogArticle.class));
+                .when(blogArticleMapper).insert(any(BlogArticle.class));
 
         BlogArticle article = buildArticle("Foreign key failure", randomSlug(), "draft content", 5L);
         article.setArticleSummary("summary");
         article.setCategoryId(1L);
 
         mockMvc.perform(post("/admin/article")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
@@ -278,16 +336,45 @@ class BlogArticleControllerTest {
     }
 
     @Test
-    void shouldRejectInvalidAuthorOnCreate() throws Exception {
-        BlogArticle article = buildArticle("Invalid author", randomSlug(), "draft content", 999L);
+    void shouldIgnoreSpoofedAuthorOnCreate() throws Exception {
+        BlogArticle article = buildArticle("Spoofed author", randomSlug(), "draft content", 1L);
         article.setCategoryId(1L);
 
-        mockMvc.perform(post("/admin/article")
+        JsonNode createdNode = performJson(post("/admin/article")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(article)));
+
+        long articleId = createdNode.path("data").path("id").asLong();
+        assertThat(articleId).isPositive();
+
+        BlogArticle persisted = blogArticleMapper.selectById(articleId);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getAuthorId()).isEqualTo(5L);
+    }
+
+    @Test
+    void shouldIgnoreSpoofedAuthorOnUpdate() throws Exception {
+        BlogArticle updateRequest = buildArticle(
+                "Build a Personal Blog with Spring Boot updated",
+                "build-personal-blog-with-spring-boot",
+                "Updated content",
+                1L);
+        updateRequest.setArticleSummary("Updated summary");
+        updateRequest.setCategoryId(1L);
+        updateRequest.setTopFlag(true);
+        updateRequest.setAllowComment(false);
+
+        mockMvc.perform(put("/admin/article/{id}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(article)))
+                        .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("authorId does not exist"));
+                .andExpect(jsonPath("$.code").value(200));
+
+        BlogArticle persisted = blogArticleMapper.selectById(1L);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getAuthorId()).isEqualTo(2L);
     }
 
     @Test
@@ -296,6 +383,7 @@ class BlogArticleControllerTest {
         article.setCategoryId(999L);
 
         mockMvc.perform(post("/admin/article")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
@@ -309,6 +397,7 @@ class BlogArticleControllerTest {
         request.setTagIds(java.util.List.of(2L, 4L, 4L));
 
         mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -324,6 +413,7 @@ class BlogArticleControllerTest {
         request.setTagIds(java.util.List.of());
 
         mockMvc.perform(put("/admin/article/{id}/tags", 3L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -343,6 +433,7 @@ class BlogArticleControllerTest {
         removeRequest.setTagIds(java.util.List.of(1L));
 
         mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(removeRequest)))
                 .andExpect(status().isOk())
@@ -352,6 +443,7 @@ class BlogArticleControllerTest {
         restoreRequest.setTagIds(java.util.List.of(1L, 3L));
 
         mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(restoreRequest)))
                 .andExpect(status().isOk())
@@ -378,6 +470,7 @@ class BlogArticleControllerTest {
         request.setTagIds(java.util.List.of(1L));
 
         mockMvc.perform(put("/admin/article/{id}/tags", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -391,6 +484,7 @@ class BlogArticleControllerTest {
         request.setTagIds(java.util.List.of(999L));
 
         mockMvc.perform(put("/admin/article/{id}/tags", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -409,6 +503,7 @@ class BlogArticleControllerTest {
         created.setCategoryId(1L);
 
         JsonNode createdNode = performJson(post("/admin/article")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(created)));
 
@@ -435,6 +530,7 @@ class BlogArticleControllerTest {
         updateRequest.setAllowComment(false);
 
         performJson(put("/admin/article/{id}", articleId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)));
 
@@ -448,6 +544,7 @@ class BlogArticleControllerTest {
         assertThat(updated.getAllowComment()).isFalse();
 
         mockMvc.perform(put("/admin/article/{id}/status", articleId)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("status", "PUBLISHED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
@@ -458,7 +555,7 @@ class BlogArticleControllerTest {
         assertThat(published.getPublishedTime()).isNotNull();
 
         mockMvc.perform(delete("/admin/article/{id}", articleId)
-                        .param("operatorUserId", "5"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -494,6 +591,7 @@ class BlogArticleControllerTest {
         updateRequest.setAllowComment(null);
 
         performJson(put("/admin/article/{id}", articleId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)));
 
@@ -506,7 +604,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldReturnNotFoundWhenDeletingMissingArticle() throws Exception {
         mockMvc.perform(delete("/admin/article/{id}", 999L)
-                        .param("operatorUserId", "5"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
@@ -514,7 +612,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldRejectDeleteWhenOperatorLacksPermission() throws Exception {
         mockMvc.perform(delete("/admin/article/{id}", 1L)
-                        .param("operatorUserId", "5"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("Normal user can only delete own article."));
@@ -535,11 +633,32 @@ class BlogArticleControllerTest {
 
     private long createArticle(BlogArticle article) throws Exception {
         JsonNode createdNode = performJson(post("/admin/article")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(article)));
         long articleId = createdNode.path("data").path("id").asLong();
         assertThat(articleId).isPositive();
         return articleId;
+    }
+
+    private String loginAndGetAccessToken(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data")
+                .path("accessToken")
+                .asText();
+    }
+
+    private LoginRequest loginRequest(String userName, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUserName(userName);
+        request.setPassword(password);
+        return request;
     }
 
     private JsonNode performJson(org.springframework.test.web.servlet.RequestBuilder requestBuilder) throws Exception {

@@ -22,6 +22,6 @@ public interface IBlogArticleService extends IService<BlogArticle> {
 
     BlogArticle updateArticleStatus(Long id, String status);
 
-    boolean deleteArticle(Long id, Long operatorUserId);
+    boolean deleteArticle(Long id);
 
 }

@@ -1,0 +1,61 @@
+package org.example.personalblogsystem.auth;
+
+import org.example.personalblogcommon.exception.BlogException;
+import org.example.personalblogcommon.result.ResultCodeEnum;
+import org.springframework.stereotype.Component;
+import org.springframework.web.method.HandlerMethod;
+import org.springframework.web.servlet.AsyncHandlerInterceptor;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
+
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BEARER_PREFIX = "Bearer ";
+
+    private final JwtTokenService jwtTokenService;
+
+    public AdminAuthInterceptor(JwtTokenService jwtTokenService) {
+        this.jwtTokenService = jwtTokenService;
+    }
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || !(handler instanceof HandlerMethod handlerMethod)) {
+            return true;
+        }
+        if (!requiresAuthentication(handlerMethod)) {
+            return true;
+        }
+
+        String authorization = request.getHeader(AUTHORIZATION_HEADER);
+        if (authorization == null || !authorization.regionMatches(true, 0, BEARER_PREFIX, 0, BEARER_PREFIX.length())) {
+            throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
+        }
+
+        String token = authorization.substring(BEARER_PREFIX.length()).trim();
+        if (token.isEmpty()) {
+            throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
+        }
+
+        AdminAuthContext.set(jwtTokenService.parseAccessToken(token));
+        return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) {
+        AdminAuthContext.clear();
+    }
+
+    @Override
+    public void afterConcurrentHandlingStarted(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        AdminAuthContext.clear();
+    }
+
+    private boolean requiresAuthentication(HandlerMethod handlerMethod) {
+        return handlerMethod.hasMethodAnnotation(AdminAuthenticated.class)
+                || handlerMethod.getBeanType().isAnnotationPresent(AdminAuthenticated.class);
+    }
+}

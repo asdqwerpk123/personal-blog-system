@@ -1,6 +1,7 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
@@ -57,18 +58,21 @@ public class BlogArticleController {
         return article == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(blogArticleTagService.listTagsByArticleId(id));
     }
 
+    @AdminAuthenticated
     @PostMapping
     public Result<BlogArticle> create(@RequestBody BlogArticle article) {
         validateArticleForCreate(article);
         return Result.ok(blogArticleService.createArticle(article));
     }
 
+    @AdminAuthenticated
     @PutMapping("/{id}/tags")
     public Result<List<BlogTag>> updateTags(@PathVariable Long id, @RequestBody ArticleTagUpdateRequest request) {
         validateArticleTagUpdateRequest(request);
         return Result.ok(blogArticleTagService.replaceArticleTags(id, request.getTagIds()));
     }
 
+    @AdminAuthenticated
     @PutMapping("/{id}")
     public Result<BlogArticle> update(@PathVariable Long id, @RequestBody BlogArticle article) {
         validateArticleForUpdate(article);
@@ -76,6 +80,7 @@ public class BlogArticleController {
         return updatedArticle == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedArticle);
     }
 
+    @AdminAuthenticated
     @PutMapping("/{id}/status")
     public Result<BlogArticle> updateStatus(@PathVariable Long id, @RequestParam String status) {
         validateStatus(status);
@@ -83,9 +88,10 @@ public class BlogArticleController {
         return updatedArticle == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedArticle);
     }
 
+    @AdminAuthenticated
     @DeleteMapping("/{id}")
-    public Result<Void> delete(@PathVariable Long id, @RequestParam Long operatorUserId) {
-        return blogArticleService.deleteArticle(id, operatorUserId) ? Result.ok(null) : Result.fail(ResultCodeEnum.NOT_FOUND);
+    public Result<Void> delete(@PathVariable Long id) {
+        return blogArticleService.deleteArticle(id) ? Result.ok(null) : Result.fail(ResultCodeEnum.NOT_FOUND);
     }
 
     private void validatePageRequest(long current, long size) {
@@ -102,16 +108,10 @@ public class BlogArticleController {
 
     private void validateArticleForCreate(BlogArticle article) {
         validateArticle(article);
-        if (article.getAuthorId() == null) {
-            throw new IllegalArgumentException("authorId must not be null");
-        }
     }
 
     private void validateArticleForUpdate(BlogArticle article) {
         validateArticle(article);
-        if (article.getAuthorId() == null) {
-            throw new IllegalArgumentException("authorId must not be null");
-        }
     }
 
     private void validateArticle(BlogArticle article) {

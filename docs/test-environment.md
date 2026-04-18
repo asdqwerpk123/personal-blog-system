@@ -40,7 +40,28 @@ USE personal_blog_system_test;
 
 ## Configure `BLOG_DB_TEST_*`
 
-### PowerShell：只对当前会话生效
+推荐做法是先运行仓库脚本，让它一次性把三个环境变量写入当前进程和当前用户环境：
+
+```powershell
+.\scripts\setup-test-env.ps1
+```
+
+默认会写入：
+
+- `BLOG_DB_TEST_URL=jdbc:mysql://localhost:3306/personal_blog_system_test?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false`
+- `BLOG_DB_TEST_USERNAME=root`
+- `BLOG_DB_TEST_PASSWORD=123456`
+
+如果你需要临时覆盖默认值，可以显式传参：
+
+```powershell
+.\scripts\setup-test-env.ps1 `
+  -DbUrl 'jdbc:mysql://localhost:3306/personal_blog_system_test?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false' `
+  -DbUsername 'root' `
+  -DbPassword '123456'
+```
+
+只有在你明确不想使用脚本时，才手工设置环境变量：
 
 ```powershell
 $env:BLOG_DB_TEST_URL='jdbc:mysql://localhost:3306/personal_blog_system_test?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false'
@@ -48,32 +69,45 @@ $env:BLOG_DB_TEST_USERNAME='root'
 $env:BLOG_DB_TEST_PASSWORD='123456'
 ```
 
-### PowerShell：写入当前用户环境变量
+## Run Tests from PowerShell / Maven
+
+以后统一通过脚本跑测试：
 
 ```powershell
-[System.Environment]::SetEnvironmentVariable('BLOG_DB_TEST_URL', 'jdbc:mysql://localhost:3306/personal_blog_system_test?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false', 'User')
-[System.Environment]::SetEnvironmentVariable('BLOG_DB_TEST_USERNAME', 'root', 'User')
-[System.Environment]::SetEnvironmentVariable('BLOG_DB_TEST_PASSWORD', '123456', 'User')
+.\scripts\test-with-test-db.ps1
 ```
 
-如果使用持久化环境变量，请重开 PowerShell 或 IntelliJ IDEA，再重新运行测试。
-
-## Run Tests from PowerShell / Maven
+这个脚本会先从当前进程或当前用户环境中加载 `BLOG_DB_TEST_URL`、`BLOG_DB_TEST_USERNAME`、`BLOG_DB_TEST_PASSWORD`，再执行：
 
 ```powershell
 ./mvnw.cmd test
-./mvnw.cmd -pl personal-blog-admin "-Dtest=BlogCategoryControllerTest" test
 ```
 
 期望结果：测试库可连接且 `BLOG_DB_TEST_*` 配置完整时，Maven 以 `BUILD SUCCESS` 结束。
 
+如果脚本提示缺少持久化环境变量，请先运行：
+
+```powershell
+.\scripts\setup-test-env.ps1
+```
+
 ## Run Tests from IntelliJ IDEA
 
-1. 打开 `Run | Edit Configurations...`
-2. 找到用于测试的 JUnit 或 Maven 配置。
-3. 在 `Environment variables` 中加入 `BLOG_DB_TEST_URL=...;BLOG_DB_TEST_USERNAME=root;BLOG_DB_TEST_PASSWORD=123456`。
-4. 不要把这三个值写到 `VM options`。
-5. 如果 IDEA 是在旧环境下启动的，更新持久化环境变量后请先重启 IDEA，再重新运行测试。
+推荐先在 PowerShell 中执行一次：
+
+```powershell
+.\scripts\setup-test-env.ps1
+```
+
+这样新的 IDEA 进程可以继承 `BLOG_DB_TEST_*`。
+
+如果你使用已有的 IDEA 进程，请打开 `Run | Edit Configurations...`，在测试配置的 `Environment variables` 中显式加入：
+
+```text
+BLOG_DB_TEST_URL=...;BLOG_DB_TEST_USERNAME=root;BLOG_DB_TEST_PASSWORD=123456
+```
+
+不要把这三个值写进 `VM options`。如果你刚更新了持久化环境变量，请先重启 IDEA，再重新运行测试。
 
 ## Expected Fail-Fast Error
 
@@ -83,7 +117,7 @@ $env:BLOG_DB_TEST_PASSWORD='123456'
 Missing required test database environment variables: BLOG_DB_TEST_URL, BLOG_DB_TEST_USERNAME, BLOG_DB_TEST_PASSWORD
 ```
 
-这表示测试环境尚未初始化完成，不表示业务代码回归。修复方式是补齐 `BLOG_DB_TEST_*` 变量并确认测试库可连接，而不是把 `application-test.yml` 改回 `dev` 回退逻辑。
+这表示测试环境尚未初始化完成，不表示业务代码回归。修复方式是补齐 `BLOG_DB_TEST_*` 变量并确认测试库可连接；推荐先运行 `.\scripts\setup-test-env.ps1`，然后通过 `.\scripts\test-with-test-db.ps1` 执行测试，而不是把 `application-test.yml` 改回 `dev` 回退逻辑。
 
 ## Troubleshooting Checklist
 
@@ -91,3 +125,4 @@ Missing required test database environment variables: BLOG_DB_TEST_URL, BLOG_DB_
 - `Access denied`：重新检查 `BLOG_DB_TEST_USERNAME` 和 `BLOG_DB_TEST_PASSWORD`。
 - 仍然读取旧值：如果使用了持久化环境变量，重开 PowerShell 或 IntelliJ IDEA。
 - 不要把 `BLOG_DB_TEST_URL` 指向 `personal_blog_system`；测试库应与开发库分离。
+- 在新终端里仍然报缺少 `BLOG_DB_TEST_*`：先重新执行 `.\scripts\setup-test-env.ps1`，再运行 `.\scripts\test-with-test-db.ps1`；如果你刚刚写入了用户级环境变量，旧 PowerShell / IDEA 进程可能还没有重新加载。

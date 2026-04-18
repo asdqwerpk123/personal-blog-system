@@ -3,6 +3,8 @@ package org.example.personalblogsystem.dto;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
+
 @Getter
 @Setter
 public class LoginUserResponse {
@@ -18,4 +20,7 @@ public class LoginUserResponse {
     private String roleCode;
     private String roleName;
     private String userStatus;
+    private String accessToken;
+    private String tokenType;
+    private Instant expiresAt;
 }

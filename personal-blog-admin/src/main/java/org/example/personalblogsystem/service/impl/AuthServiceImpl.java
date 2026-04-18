@@ -1,5 +1,7 @@
 package org.example.personalblogsystem.service.impl;
 
+import org.example.personalblogsystem.auth.AdminAuthPrincipal;
+import org.example.personalblogsystem.auth.JwtTokenService;
 import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.dto.LoginUserQueryRow;
 import org.example.personalblogsystem.dto.LoginUserResponse;
@@ -11,14 +13,17 @@ import org.springframework.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 
 @Service
 public class AuthServiceImpl implements IAuthService {
 
     private final SysUserMapper sysUserMapper;
+    private final JwtTokenService jwtTokenService;
 
-    public AuthServiceImpl(SysUserMapper sysUserMapper) {
+    public AuthServiceImpl(SysUserMapper sysUserMapper, JwtTokenService jwtTokenService) {
         this.sysUserMapper = sysUserMapper;
+        this.jwtTokenService = jwtTokenService;
     }
 
     @Override
@@ -82,6 +87,11 @@ public class AuthServiceImpl implements IAuthService {
         response.setRoleCode(row.getRoleCode());
         response.setRoleName(row.getRoleName());
         response.setUserStatus(row.getUserStatus());
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(row.getId(), row.getUserName(), row.getRoleId(), row.getRoleCode());
+        Instant expiresAt = jwtTokenService.calculateAccessTokenExpiresAt();
+        response.setAccessToken(jwtTokenService.issueAccessToken(principal, expiresAt));
+        response.setTokenType("Bearer");
+        response.setExpiresAt(expiresAt);
         return response;
     }
 }

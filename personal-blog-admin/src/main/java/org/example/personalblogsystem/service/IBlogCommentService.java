@@ -14,5 +14,5 @@ public interface IBlogCommentService extends IService<BlogComment> {
 
     BlogComment updateCommentStatus(Long id, String status);
 
-    boolean deleteComment(Long id, Long operatorUserId);
+    boolean deleteComment(Long id);
 }
