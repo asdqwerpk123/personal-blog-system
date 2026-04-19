@@ -3,6 +3,7 @@ package org.example.personalblogsystem.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.mapper.BlogTagMapper;
 import org.example.personalblogcommon.result.ResultCodeEnum;
@@ -106,58 +107,92 @@ class BlogTagControllerTest {
 
     @Test
     void shouldRejectBlankTagNameOnCreate() throws Exception {
-        BlogTag tag = new BlogTag();
-        tag.setTagName("   ");
-        tag.setDescription("temp");
-        tag.setCreatedBy(2L);
+        String requestJson = """
+                {
+                  "tagName": "   ",
+                  "description": "temp"
+                }
+                """;
 
         mockMvc.perform(post("/admin/tag")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(tag)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("tagName must not be blank"));
     }
 
     @Test
-    void shouldRejectMissingCreatedByOnCreate() throws Exception {
-        BlogTag tag = new BlogTag();
-        tag.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        tag.setDescription("temp");
+    void shouldRejectUnauthenticatedCreateTag() throws Exception {
+        String requestJson = """
+                {
+                  "tagName": "Temp-%s",
+                  "description": "temp"
+                }
+                """.formatted(UUID.randomUUID().toString().substring(0, 8));
 
         mockMvc.perform(post("/admin/tag")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(tag)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("createdBy must not be null"));
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
-    void shouldRejectInvalidCreatedByOnCreate() throws Exception {
-        BlogTag tag = new BlogTag();
-        tag.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        tag.setDescription("temp");
-        tag.setCreatedBy(999L);
+    void shouldAllowCreateWithoutClientCreatedBy() throws Exception {
+        String requestJson = """
+                {
+                  "tagName": "Temp-%s",
+                  "description": "temp"
+                }
+                """.formatted(UUID.randomUUID().toString().substring(0, 8));
 
         mockMvc.perform(post("/admin/tag")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(tag)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("createdBy does not exist"));
+                .andExpect(jsonPath("$.code").value(200));
+    }
+
+    @Test
+    void shouldIgnoreSpoofedCreatedByAndPersistAuthenticatedOwner() throws Exception {
+        LoginSession session = loginAndGetSession("root", "123456");
+        String tagName = "Temp-" + UUID.randomUUID().toString().substring(0, 8);
+        String requestJson = """
+                {
+                  "tagName": "%s",
+                  "description": "temp",
+                  "createdBy": 999
+                }
+                """.formatted(tagName);
+
+        JsonNode createdNode = performJson(post("/admin/tag")
+                .header("Authorization", "Bearer " + session.accessToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson));
+
+        long tagId = createdNode.path("data").path("id").asLong();
+        BlogTag persisted = blogTagMapper.selectById(tagId);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getTagName()).isEqualTo(tagName);
+        assertThat(persisted.getCreatedBy()).isEqualTo(session.userId());
     }
 
     @Test
     void shouldRejectDuplicateTagNameOnCreate() throws Exception {
-        BlogTag tag = new BlogTag();
-        tag.setTagName("SpringBoot");
-        tag.setDescription("duplicate");
-        tag.setCreatedBy(2L);
+        String requestJson = """
+                {
+                  "tagName": "SpringBoot",
+                  "description": "duplicate"
+                }
+                """;
 
         mockMvc.perform(post("/admin/tag")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(tag)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("tagName already exists"));
@@ -169,14 +204,17 @@ class BlogTagControllerTest {
                 .when(blogTagMapper)
                 .insert(any(BlogTag.class));
 
-        BlogTag tag = new BlogTag();
-        tag.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        tag.setDescription("temp");
-        tag.setCreatedBy(2L);
+        String requestJson = """
+                {
+                  "tagName": "Temp-%s",
+                  "description": "temp"
+                }
+                """.formatted(UUID.randomUUID().toString().substring(0, 8));
 
         mockMvc.perform(post("/admin/tag")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(tag)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("tagName already exists"));
@@ -206,38 +244,45 @@ class BlogTagControllerTest {
                 .when(blogTagMapper)
                 .insert(any(BlogTag.class));
 
-        BlogTag tag = new BlogTag();
-        tag.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        tag.setDescription("temp");
-        tag.setCreatedBy(2L);
+        String requestJson = """
+                {
+                  "tagName": "Temp-%s",
+                  "description": "temp"
+                }
+                """.formatted(UUID.randomUUID().toString().substring(0, 8));
 
         mockMvc.perform(post("/admin/tag")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(tag)))
+                        .content(requestJson))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(ResultCodeEnum.SYSTEM_ERROR.getCode()));
     }
 
     @Test
     void shouldCreateUpdateAndDeleteTag() throws Exception {
-        BlogTag created = new BlogTag();
-        created.setTagName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(2L);
+        String tagName = "Temp-" + UUID.randomUUID().toString().substring(0, 8);
+        String createRequest = """
+                {
+                  "tagName": "%s",
+                  "description": "temp"
+                }
+                """.formatted(tagName);
 
         JsonNode createdNode = performJson(post("/admin/tag")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(created)));
+                .content(createRequest));
 
         long tagId = createdNode.path("data").path("id").asLong();
         assertThat(tagId).isPositive();
 
         BlogTag persisted = blogTagMapper.selectById(tagId);
         assertThat(persisted).isNotNull();
-        assertThat(persisted.getTagName()).isEqualTo(created.getTagName());
+        assertThat(persisted.getTagName()).isEqualTo(tagName);
 
         BlogTag updateRequest = new BlogTag();
-        updateRequest.setTagName(created.getTagName() + "-updated");
+        updateRequest.setTagName(tagName + "-updated");
         updateRequest.setDescription("updated");
 
         performJson(put("/admin/tag/{id}", tagId)
@@ -246,7 +291,7 @@ class BlogTagControllerTest {
 
         BlogTag updated = blogTagMapper.selectById(tagId);
         assertThat(updated).isNotNull();
-        assertThat(updated.getTagName()).isEqualTo(created.getTagName() + "-updated");
+        assertThat(updated.getTagName()).isEqualTo(tagName + "-updated");
         assertThat(updated.getDescription()).isEqualTo("updated");
 
         mockMvc.perform(delete("/admin/tag/{id}", tagId))
@@ -307,5 +352,32 @@ class BlogTagControllerTest {
                         "Cannot add or update a child row: a foreign key constraint fails",
                         "23000",
                         1452));
+    }
+
+    private String loginAndGetAccessToken(String userName, String password) throws Exception {
+        return loginAndGetSession(userName, password).accessToken();
+    }
+
+    private LoginSession loginAndGetSession(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        return new LoginSession(
+                root.path("data").path("accessToken").asText(),
+                root.path("data").path("id").asLong());
+    }
+
+    private LoginRequest loginRequest(String userName, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUserName(userName);
+        request.setPassword(password);
+        return request;
+    }
+
+    private record LoginSession(String accessToken, long userId) {
     }
 }

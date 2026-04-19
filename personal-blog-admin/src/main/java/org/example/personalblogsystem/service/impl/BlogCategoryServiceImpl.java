@@ -3,6 +3,7 @@ package org.example.personalblogsystem.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.mapper.BlogArticleMapper;
@@ -58,6 +59,7 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
 
     @Override
     public BlogCategory createCategory(BlogCategory category) {
+        category.setCreatedBy(AdminAuthContext.requireCurrentUser().getUserId());
         validateCreatedByExists(category.getCreatedBy());
         validateCategoryNameUnique(category.getCategoryName(), null);
 
