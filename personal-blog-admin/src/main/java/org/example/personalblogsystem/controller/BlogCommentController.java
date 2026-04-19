@@ -3,7 +3,6 @@ package org.example.personalblogsystem.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
-import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogsystem.entity.BlogComment;
 import org.example.personalblogsystem.service.IBlogCommentService;
 import org.springframework.util.StringUtils;
@@ -46,7 +45,6 @@ public class BlogCommentController {
         return Result.ok(blogCommentService.listCommentsByArticleId(articleId));
     }
 
-    @AdminAuthenticated
     @PutMapping("/{id}/status")
     public Result<BlogComment> updateStatus(@PathVariable Long id, @RequestParam String status) {
         validateStatus(status);
@@ -54,7 +52,6 @@ public class BlogCommentController {
         return updatedComment == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedComment);
     }
 
-    @AdminAuthenticated
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         return blogCommentService.deleteComment(id) ? Result.ok(null) : Result.fail(ResultCodeEnum.NOT_FOUND);

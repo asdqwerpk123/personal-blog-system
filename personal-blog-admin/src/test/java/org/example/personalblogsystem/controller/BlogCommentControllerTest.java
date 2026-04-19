@@ -53,6 +53,7 @@ class BlogCommentControllerTest {
     @Test
     void shouldReturnPagedComments() throws Exception {
         mockMvc.perform(get("/admin/comment/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -68,6 +69,7 @@ class BlogCommentControllerTest {
         jdbcTemplate.update("update blog_comment set comment_status = 'REJECTED' where id = 3");
 
         mockMvc.perform(get("/admin/comment/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10")
                         .param("keyword", "Vue")
@@ -82,7 +84,8 @@ class BlogCommentControllerTest {
 
     @Test
     void shouldReturnFlatCommentsForArticle() throws Exception {
-        mockMvc.perform(get("/admin/comment/article/{articleId}", 1L))
+        mockMvc.perform(get("/admin/comment/article/{articleId}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.length()").value(2))
@@ -96,6 +99,7 @@ class BlogCommentControllerTest {
     @Test
     void shouldRejectInvalidCommentPageCurrent() throws Exception {
         mockMvc.perform(get("/admin/comment/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "0")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -106,6 +110,7 @@ class BlogCommentControllerTest {
     @Test
     void shouldRejectInvalidCommentPageSize() throws Exception {
         mockMvc.perform(get("/admin/comment/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "101"))
                 .andExpect(status().isOk())
@@ -116,6 +121,7 @@ class BlogCommentControllerTest {
     @Test
     void shouldRejectInvalidCommentStatusFilter() throws Exception {
         mockMvc.perform(get("/admin/comment/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10")
                         .param("status", "ARCHIVED"))

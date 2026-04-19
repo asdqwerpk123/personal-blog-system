@@ -1,7 +1,6 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.dto.BlogCategoryCreateRequest;
@@ -51,7 +50,6 @@ public class BlogCategoryController {
         return Result.ok(blogCategoryService.pageCategories(current, size, keyword));
     }
 
-    @AdminAuthenticated
     @PostMapping
     public Result<BlogCategory> create(@RequestBody BlogCategoryCreateRequest request) {
         validateCategoryForCreate(request);

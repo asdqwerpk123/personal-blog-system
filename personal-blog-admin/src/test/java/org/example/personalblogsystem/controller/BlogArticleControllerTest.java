@@ -68,7 +68,8 @@ class BlogArticleControllerTest {
 
     @Test
     void shouldReturnWrappedArticleResult() throws Exception {
-        mockMvc.perform(get("/admin/article/1"))
+        mockMvc.perform(get("/admin/article/1")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -78,6 +79,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldReturnPagedArticles() throws Exception {
         mockMvc.perform(get("/admin/article/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -91,6 +93,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldFilterPagedArticlesByKeyword() throws Exception {
         mockMvc.perform(get("/admin/article/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10")
                         .param("keyword", "Vue"))
@@ -103,7 +106,8 @@ class BlogArticleControllerTest {
 
     @Test
     void shouldReturnTagsForArticle() throws Exception {
-        mockMvc.perform(get("/admin/article/{id}/tags", 1L))
+        mockMvc.perform(get("/admin/article/{id}/tags", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.length()").value(2))
@@ -113,7 +117,8 @@ class BlogArticleControllerTest {
 
     @Test
     void shouldReturnNotFoundWhenGettingTagsForMissingArticle() throws Exception {
-        mockMvc.perform(get("/admin/article/{id}/tags", 999L))
+        mockMvc.perform(get("/admin/article/{id}/tags", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
@@ -217,6 +222,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldRejectInvalidArticlePageCurrent() throws Exception {
         mockMvc.perform(get("/admin/article/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "0")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -227,6 +233,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldRejectInvalidArticlePageSize() throws Exception {
         mockMvc.perform(get("/admin/article/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "101"))
                 .andExpect(status().isOk())

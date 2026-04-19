@@ -3,7 +3,6 @@ package org.example.personalblogsystem.auth;
 import org.example.personalblogcommon.exception.BlogException;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.springframework.stereotype.Component;
-import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.AsyncHandlerInterceptor;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,6 +13,7 @@ public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
 
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String ADMIN_LOGIN_PATH = "/admin/auth/login";
 
     private final JwtTokenService jwtTokenService;
 
@@ -23,10 +23,7 @@ public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
-        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || !(handler instanceof HandlerMethod handlerMethod)) {
-            return true;
-        }
-        if (!requiresAuthentication(handlerMethod)) {
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || isPublicAdminEndpoint(request)) {
             return true;
         }
 
@@ -54,8 +51,7 @@ public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
         AdminAuthContext.clear();
     }
 
-    private boolean requiresAuthentication(HandlerMethod handlerMethod) {
-        return handlerMethod.hasMethodAnnotation(AdminAuthenticated.class)
-                || handlerMethod.getBeanType().isAnnotationPresent(AdminAuthenticated.class);
+    private boolean isPublicAdminEndpoint(HttpServletRequest request) {
+        return "POST".equalsIgnoreCase(request.getMethod()) && ADMIN_LOGIN_PATH.equals(request.getRequestURI());
     }
 }

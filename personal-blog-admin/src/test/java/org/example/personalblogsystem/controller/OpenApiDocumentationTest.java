@@ -1,5 +1,6 @@
 package org.example.personalblogsystem.controller;
 
+import org.hamcrest.Matchers;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,8 +35,13 @@ class OpenApiDocumentationTest {
                 .andExpect(jsonPath("$.info.title").value("Personal Blog API"))
                 .andExpect(jsonPath("$.info.version").value("v1"))
                 .andExpect(jsonPath("$.info.description").value("Personal blog backend APIs"))
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"))
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.bearerFormat").value("JWT"))
+                .andExpect(jsonPath("$.security[0].bearerAuth").isArray())
                 .andExpect(jsonPath("$.paths['/admin/friend-link/page']").exists())
                 .andExpect(jsonPath("$.paths['/admin/operation-log/page']").exists())
-                .andExpect(jsonPath("$.paths['/admin/auth/login']").exists());
+                .andExpect(jsonPath("$.paths['/admin/auth/login']").exists())
+                .andExpect(jsonPath("$.paths['/admin/auth/login'].post.security").value(Matchers.empty()));
     }
 }

@@ -6,12 +6,13 @@ import org.example.personalblogsystem.config.BlogAuthProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.method.HandlerMethod;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.web.method.HandlerMethod;
 
 import java.lang.reflect.Method;
 import java.time.Instant;
@@ -26,9 +27,11 @@ class AdminAuthInterceptorTest {
     private OpenController openController;
     private TypeAnnotatedController typeAnnotatedController;
     private MethodAnnotatedController methodAnnotatedController;
+    private LoginController loginController;
     private Method openMethod;
     private Method typeAnnotatedMethod;
     private Method methodAnnotatedMethod;
+    private Method loginMethod;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -41,9 +44,11 @@ class AdminAuthInterceptorTest {
         openController = new OpenController();
         typeAnnotatedController = new TypeAnnotatedController();
         methodAnnotatedController = new MethodAnnotatedController();
+        loginController = new LoginController();
         openMethod = OpenController.class.getDeclaredMethod("ping");
         typeAnnotatedMethod = TypeAnnotatedController.class.getDeclaredMethod("ping");
         methodAnnotatedMethod = MethodAnnotatedController.class.getDeclaredMethod("ping");
+        loginMethod = LoginController.class.getDeclaredMethod("login");
     }
 
     @AfterEach
@@ -162,10 +167,31 @@ class AdminAuthInterceptorTest {
     }
 
     @Test
-    void shouldAllowUnannotatedAdminHandlerDuringPhaseOne() throws Exception {
+    void shouldRejectUnannotatedAdminHandlerWithoutBearerToken() {
         AdminAuthContext.clear();
         HandlerMethod handlerMethod = new HandlerMethod(openController, openMethod);
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/open");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        BlogException exception = assertThrows(BlogException.class, () -> interceptor.preHandle(request, response, handlerMethod));
+        assertThat(exception.getCode()).isEqualTo(ResultCodeEnum.UNAUTHORIZED.getCode());
+        assertThat(AdminAuthContext.get()).isNull();
+    }
+
+    @Test
+    void shouldAllowPostLoginWithoutBearerToken() {
+        HandlerMethod handlerMethod = new HandlerMethod(loginController, loginMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/admin/auth/login");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThat(interceptor.preHandle(request, response, handlerMethod)).isTrue();
+        assertThat(AdminAuthContext.get()).isNull();
+    }
+
+    @Test
+    void shouldAllowOptionsRequestWithoutBearerToken() {
+        HandlerMethod handlerMethod = new HandlerMethod(openController, openMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/admin/open");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         assertThat(interceptor.preHandle(request, response, handlerMethod)).isTrue();
@@ -199,6 +225,15 @@ class AdminAuthInterceptorTest {
         @GetMapping("/open")
         public String ping() {
             return "open";
+        }
+    }
+
+    @RestController
+    static class LoginController {
+
+        @PostMapping("/admin/auth/login")
+        public String login() {
+            return "ok";
         }
     }
 }
