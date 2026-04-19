@@ -1,7 +1,6 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.dto.BlogFriendLinkCreateRequest;
@@ -42,7 +41,6 @@ public class BlogFriendLinkController {
         return Result.ok(blogFriendLinkService.pageFriendLinks(current, size, keyword, status));
     }
 
-    @AdminAuthenticated
     @PostMapping
     public Result<BlogFriendLink> create(@RequestBody BlogFriendLinkCreateRequest request) {
         validateFriendLinkForCreate(request);

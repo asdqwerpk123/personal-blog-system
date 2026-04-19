@@ -107,7 +107,12 @@ personal-blog-system
 - 评论：`GET /admin/comment/page`、`GET /admin/comment/article/{articleId}`、`PUT /admin/comment/{id}/status`、`DELETE /admin/comment/{id}`
 - 友情链接：`GET /admin/friend-link/page`、`POST /admin/friend-link`、`PUT /admin/friend-link/{id}`、`DELETE /admin/friend-link/{id}`
 - 操作日志：`GET /admin/operation-log/page`
-- 最小登录：`POST /admin/auth/login`
+- 登录：`POST /admin/auth/login`，返回脱敏用户信息与 Bearer `accessToken`
+
+后台接口调用约定：
+
+- 除 `POST /admin/auth/login` 和 CORS `OPTIONS` 预检外，所有 `/admin/**` 接口都需要携带 `Authorization: Bearer <accessToken>`
+- OpenAPI JSON 和 Swagger UI 已同步展示 Bearer JWT 鉴权信息，便于前后端联调
 
 ### 4. 文档与测试验证
 
@@ -370,14 +375,14 @@ password: admin123
 
 - P0 重点解决项目启动、统一返回、分页与 OpenAPI 文档
 - P1 补齐标签、文章标签关联、评论管理
-- P2 补齐友情链接、操作日志分页、最小登录接口
-- P2 仍然没有引入 JWT、Spring Security、全局鉴权拦截
+- P2 补齐友情链接、操作日志分页、登录接口
+- 当前管理端已经补齐 Bearer JWT 登录、`/admin/**` 默认鉴权和服务端身份绑定
 
 ## 后续开发建议
 
 后续可以继续补充：
 
-- 登录后的鉴权拦截与权限控制
+- 更细粒度的角色权限控制、refresh token 与 logout 机制
 - 前台博客站点接口
 - 更完整的参数校验与请求 DTO
 - 操作日志的更多查询维度

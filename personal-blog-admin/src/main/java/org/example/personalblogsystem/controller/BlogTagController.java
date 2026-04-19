@@ -1,7 +1,6 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.dto.BlogTagCreateRequest;
@@ -38,7 +37,6 @@ public class BlogTagController {
         return Result.ok(blogTagService.pageTags(current, size, keyword));
     }
 
-    @AdminAuthenticated
     @PostMapping
     public Result<BlogTag> create(@RequestBody BlogTagCreateRequest request) {
         validateTagForCreate(request);

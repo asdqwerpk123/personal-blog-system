@@ -51,5 +51,7 @@
 ## Notes
 
 - Unified response wrapper: `Result`
+- Management endpoints under `/admin/**` require `Authorization: Bearer <accessToken>` by default
+- `POST /admin/auth/login` remains public and returns sanitized user info plus `accessToken`, `tokenType`, and `expiresAt`
+- CORS `OPTIONS` preflight requests are allowed without a token
 - Swagger/OpenAPI is the primary up-to-date reference
-- P2 login is intentionally minimal: it only validates credentials and returns user info, without JWT or global request interception

@@ -68,7 +68,8 @@ class BlogCategoryControllerTest {
 
     @Test
     void shouldReturnWrappedCategoryResult() throws Exception {
-        mockMvc.perform(get("/admin/category/1"))
+        mockMvc.perform(get("/admin/category/1")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.id").value(1))
@@ -77,7 +78,8 @@ class BlogCategoryControllerTest {
 
     @Test
     void shouldReturnCategoriesOrderedBySortNo() throws Exception {
-        mockMvc.perform(get("/admin/category/list"))
+        mockMvc.perform(get("/admin/category/list")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.length()").value(3))
@@ -89,6 +91,7 @@ class BlogCategoryControllerTest {
     @Test
     void shouldReturnPagedCategories() throws Exception {
         mockMvc.perform(get("/admin/category/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -104,6 +107,7 @@ class BlogCategoryControllerTest {
     @Test
     void shouldFilterPagedCategoriesByKeyword() throws Exception {
         mockMvc.perform(get("/admin/category/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10")
                         .param("keyword", "Vue"))
@@ -117,6 +121,7 @@ class BlogCategoryControllerTest {
     @Test
     void shouldRejectInvalidCategoryPageCurrent() throws Exception {
         mockMvc.perform(get("/admin/category/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "0")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -126,6 +131,7 @@ class BlogCategoryControllerTest {
     @Test
     void shouldRejectInvalidCategoryPageSize() throws Exception {
         mockMvc.perform(get("/admin/category/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "101"))
                 .andExpect(status().isOk())
@@ -150,8 +156,8 @@ class BlogCategoryControllerTest {
         BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(created)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(401));
     }
@@ -267,7 +273,6 @@ class BlogCategoryControllerTest {
     void shouldIgnoreSpoofedCreatedByAndPersistAuthenticatedOwner() throws Exception {
         LoginSession session = loginAndGetSession("root", "123456");
         String categoryName = "Temp-" + UUID.randomUUID().toString().substring(0, 8);
-
         String requestJson = """
                 {
                   "categoryName": "%s",
@@ -313,6 +318,7 @@ class BlogCategoryControllerTest {
         updateRequest.setSortNo(10);
 
         performJson(put("/admin/category/{id}", categoryId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)));
 
@@ -322,7 +328,8 @@ class BlogCategoryControllerTest {
         assertThat(updated.getDescription()).isEqualTo("updated");
         assertThat(updated.getSortNo()).isEqualTo(10);
 
-        mockMvc.perform(delete("/admin/category/{id}", categoryId))
+        mockMvc.perform(delete("/admin/category/{id}", categoryId)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -337,6 +344,7 @@ class BlogCategoryControllerTest {
         updateRequest.setSortNo(10);
 
         mockMvc.perform(put("/admin/category/{id}", 2L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -355,6 +363,7 @@ class BlogCategoryControllerTest {
         updateRequest.setSortNo(11);
 
         mockMvc.perform(put("/admin/category/{id}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -381,6 +390,7 @@ class BlogCategoryControllerTest {
         updateRequest.setSortNo(10);
 
         mockMvc.perform(put("/admin/category/{id}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -396,7 +406,8 @@ class BlogCategoryControllerTest {
         assertThat(article).isNotNull();
         assertThat(article.getCategoryId()).isEqualTo(category.getId());
 
-        mockMvc.perform(delete("/admin/category/1"))
+        mockMvc.perform(delete("/admin/category/1")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("category is referenced by articles"));
@@ -404,7 +415,8 @@ class BlogCategoryControllerTest {
 
     @Test
     void shouldRejectDeletingMissingCategory() throws Exception {
-        mockMvc.perform(delete("/admin/category/999"))
+        mockMvc.perform(delete("/admin/category/999")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
@@ -417,6 +429,7 @@ class BlogCategoryControllerTest {
         updateRequest.setSortNo(1);
 
         mockMvc.perform(put("/admin/category/{id}", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -507,9 +520,6 @@ class BlogCategoryControllerTest {
                 root.path("data").path("id").asLong());
     }
 
-    private record LoginSession(String accessToken, long userId) {
-    }
-
     private LoginRequest loginRequest(String userName, String password) {
         LoginRequest request = new LoginRequest();
         request.setUserName(userName);
@@ -523,5 +533,8 @@ class BlogCategoryControllerTest {
         request.setDescription(description);
         request.setSortNo(sortNo);
         return request;
+    }
+
+    private record LoginSession(String accessToken, long userId) {
     }
 }
