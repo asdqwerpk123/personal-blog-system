@@ -1,8 +1,10 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
+import org.example.personalblogsystem.dto.BlogFriendLinkCreateRequest;
 import org.example.personalblogsystem.entity.BlogFriendLink;
 import org.example.personalblogsystem.service.IBlogFriendLinkService;
 import org.springframework.util.StringUtils;
@@ -40,10 +42,11 @@ public class BlogFriendLinkController {
         return Result.ok(blogFriendLinkService.pageFriendLinks(current, size, keyword, status));
     }
 
+    @AdminAuthenticated
     @PostMapping
-    public Result<BlogFriendLink> create(@RequestBody BlogFriendLink friendLink) {
-        validateFriendLinkForCreate(friendLink);
-        return Result.ok(blogFriendLinkService.createFriendLink(friendLink));
+    public Result<BlogFriendLink> create(@RequestBody BlogFriendLinkCreateRequest request) {
+        validateFriendLinkForCreate(request);
+        return Result.ok(blogFriendLinkService.createFriendLink(toFriendLink(request)));
     }
 
     @PutMapping("/{id}")
@@ -70,13 +73,14 @@ public class BlogFriendLinkController {
         }
     }
 
-    private void validateFriendLinkForCreate(BlogFriendLink friendLink) {
-        validateSiteName(friendLink);
-        validateSiteUrl(friendLink);
-        if (friendLink == null || friendLink.getCreatedBy() == null) {
-            throw new IllegalArgumentException("createdBy must not be null");
+    private void validateFriendLinkForCreate(BlogFriendLinkCreateRequest request) {
+        if (request == null || !StringUtils.hasText(request.getSiteName())) {
+            throw new IllegalArgumentException("siteName must not be blank");
         }
-        validateStatusIfPresent(friendLink.getLinkStatus());
+        if (request == null || !StringUtils.hasText(request.getSiteUrl())) {
+            throw new IllegalArgumentException("siteUrl must not be blank");
+        }
+        validateStatusIfPresent(request.getLinkStatus());
     }
 
     private void validateFriendLinkForUpdate(BlogFriendLink friendLink) {
@@ -106,5 +110,17 @@ public class BlogFriendLinkController {
         if (!"PENDING".equals(normalized) && !"APPROVED".equals(normalized) && !"REJECTED".equals(normalized)) {
             throw new IllegalArgumentException("linkStatus must be one of PENDING, APPROVED, REJECTED");
         }
+    }
+
+    private BlogFriendLink toFriendLink(BlogFriendLinkCreateRequest request) {
+        BlogFriendLink friendLink = new BlogFriendLink();
+        friendLink.setSiteName(request.getSiteName());
+        friendLink.setSiteUrl(request.getSiteUrl());
+        friendLink.setSiteLogo(request.getSiteLogo());
+        friendLink.setSiteDesc(request.getSiteDesc());
+        friendLink.setOwnerName(request.getOwnerName());
+        friendLink.setContactEmail(request.getContactEmail());
+        friendLink.setLinkStatus(request.getLinkStatus());
+        return friendLink;
     }
 }

@@ -3,6 +3,8 @@ package org.example.personalblogsystem.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.dto.BlogCategoryCreateRequest;
+import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.mapper.BlogArticleMapper;
@@ -132,12 +134,10 @@ class BlogCategoryControllerTest {
 
     @Test
     void shouldRejectBlankCategoryNameOnCreate() throws Exception {
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("   ");
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("   ", "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -146,42 +146,34 @@ class BlogCategoryControllerTest {
     }
 
     @Test
-    void shouldRejectMissingCreatedByOnCreate() throws Exception {
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
+    void shouldRejectUnauthenticatedCreateCategory() throws Exception {
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(created)))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("createdBy must not be null"));
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
-    void shouldRejectInvalidCreatedByOnCreate() throws Exception {
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(999L);
+    void shouldAllowCreateWithoutClientCreatedBy() throws Exception {
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("createdBy is invalid"));
+                .andExpect(jsonPath("$.code").value(200));
     }
 
     @Test
     void shouldRejectDuplicateCategoryNameOnCreate() throws Exception {
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Backend");
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Backend", "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -195,12 +187,10 @@ class BlogCategoryControllerTest {
                 .when(blogCategoryMapper)
                 .insert(any(BlogCategory.class));
 
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -214,12 +204,10 @@ class BlogCategoryControllerTest {
                 .when(blogCategoryMapper)
                 .insert(any(BlogCategory.class));
 
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -233,12 +221,10 @@ class BlogCategoryControllerTest {
                 .when(blogCategoryMapper)
                 .insert(any(BlogCategory.class));
 
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -251,12 +237,10 @@ class BlogCategoryControllerTest {
                 .when(blogCategoryMapper)
                 .insert(any(BlogCategory.class));
 
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -269,12 +253,10 @@ class BlogCategoryControllerTest {
                 .when(blogCategoryMapper)
                 .insert(any(BlogCategory.class));
 
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         mockMvc.perform(post("/admin/category")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(created)))
                 .andExpect(status().isOk())
@@ -282,14 +264,38 @@ class BlogCategoryControllerTest {
     }
 
     @Test
-    void shouldCreateUpdateAndDeleteCategory() throws Exception {
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setSortNo(9);
-        created.setCreatedBy(1L);
+    void shouldIgnoreSpoofedCreatedByAndPersistAuthenticatedOwner() throws Exception {
+        LoginSession session = loginAndGetSession("root", "123456");
+        String categoryName = "Temp-" + UUID.randomUUID().toString().substring(0, 8);
+
+        String requestJson = """
+                {
+                  "categoryName": "%s",
+                  "description": "temp",
+                  "sortNo": 9,
+                  "createdBy": 999
+                }
+                """.formatted(categoryName);
 
         JsonNode createdNode = performJson(post("/admin/category")
+                .header("Authorization", "Bearer " + session.accessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson));
+
+        long categoryId = createdNode.path("data").path("id").asLong();
+        BlogCategory persisted = blogCategoryMapper.selectById(categoryId);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getCategoryName()).isEqualTo(categoryName);
+        assertThat(persisted.getCreatedBy()).isEqualTo(session.userId());
+        assertThat(persisted.getSortNo()).isEqualTo(9);
+    }
+
+    @Test
+    void shouldCreateUpdateAndDeleteCategory() throws Exception {
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", 9);
+
+        JsonNode createdNode = performJson(post("/admin/category")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(created)));
 
@@ -419,12 +425,10 @@ class BlogCategoryControllerTest {
 
     @Test
     void shouldDefaultSortNoToZeroWhenOmittedOnCreate() throws Exception {
-        BlogCategory created = new BlogCategory();
-        created.setCategoryName("Temp-" + UUID.randomUUID().toString().substring(0, 8));
-        created.setDescription("temp");
-        created.setCreatedBy(1L);
+        BlogCategoryCreateRequest created = createRequest("Temp-" + UUID.randomUUID().toString().substring(0, 8), "temp", null);
 
         JsonNode createdNode = performJson(post("/admin/category")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(created)));
 
@@ -484,5 +488,40 @@ class BlogCategoryControllerTest {
                         "Column 'category_name' cannot be null",
                         "23000",
                         1048));
+    }
+
+    private String loginAndGetAccessToken(String userName, String password) throws Exception {
+        return loginAndGetSession(userName, password).accessToken();
+    }
+
+    private LoginSession loginAndGetSession(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        return new LoginSession(
+                root.path("data").path("accessToken").asText(),
+                root.path("data").path("id").asLong());
+    }
+
+    private record LoginSession(String accessToken, long userId) {
+    }
+
+    private LoginRequest loginRequest(String userName, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUserName(userName);
+        request.setPassword(password);
+        return request;
+    }
+
+    private BlogCategoryCreateRequest createRequest(String categoryName, String description, Integer sortNo) {
+        BlogCategoryCreateRequest request = new BlogCategoryCreateRequest();
+        request.setCategoryName(categoryName);
+        request.setDescription(description);
+        request.setSortNo(sortNo);
+        return request;
     }
 }

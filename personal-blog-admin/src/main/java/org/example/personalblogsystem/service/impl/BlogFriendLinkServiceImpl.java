@@ -3,6 +3,7 @@ package org.example.personalblogsystem.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.entity.BlogFriendLink;
 import org.example.personalblogsystem.mapper.BlogFriendLinkMapper;
 import org.example.personalblogsystem.mapper.SysUserMapper;
@@ -48,6 +49,9 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
 
     @Override
     public BlogFriendLink createFriendLink(BlogFriendLink friendLink) {
+        Long currentUserId = AdminAuthContext.requireCurrentUser().getUserId();
+        friendLink.setCreatedBy(currentUserId);
+        validateCreatedByExists(currentUserId);
         validateFriendLinkForCreate(friendLink);
 
         String normalizedSiteName = friendLink.getSiteName().trim();
@@ -67,7 +71,7 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         try {
             save(friendLink);
         } catch (DataAccessException exception) {
-            throw translateDuplicateSiteUrlException(exception);
+            throw translateWriteException(exception);
         }
         return getBySiteUrl(normalizedSiteUrl);
     }
@@ -100,7 +104,7 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         try {
             return updateById(existing) ? getById(id) : null;
         } catch (DataAccessException exception) {
-            throw translateDuplicateSiteUrlException(exception);
+            throw translateWriteException(exception);
         }
     }
 
@@ -116,10 +120,6 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
     private void validateFriendLinkForCreate(BlogFriendLink friendLink) {
         validateSiteName(friendLink);
         validateSiteUrl(friendLink);
-        if (friendLink == null || friendLink.getCreatedBy() == null) {
-            throw new IllegalArgumentException("createdBy must not be null");
-        }
-        validateCreatedByExists(friendLink.getCreatedBy());
         if (StringUtils.hasText(friendLink.getLinkStatus())) {
             normalizeStatus(friendLink.getLinkStatus(), null);
         }
@@ -166,16 +166,50 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
 
     private void validateCreatedByExists(Long createdBy) {
         if (createdBy == null || sysUserMapper.selectById(createdBy) == null) {
-            throw new IllegalArgumentException("createdBy does not exist");
+            throw new IllegalArgumentException("createdBy is invalid");
         }
     }
 
-    private IllegalArgumentException translateDuplicateSiteUrlException(DataAccessException exception) {
-        String message = exception.getMostSpecificCause() == null ? null : exception.getMostSpecificCause().getMessage();
-        if (message != null && message.toLowerCase().contains("duplicate")) {
+    private RuntimeException translateWriteException(DataAccessException exception) {
+        if (isDuplicateSiteUrlViolation(exception)) {
             return new IllegalArgumentException("siteUrl already exists");
         }
+        if (isCreatedByForeignKeyViolation(exception)) {
+            return new IllegalArgumentException("createdBy is invalid");
+        }
         throw exception;
+    }
+
+    private boolean isDuplicateSiteUrlViolation(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null && current.getCause() != current) {
+            String message = current.getMessage();
+            if (message != null && message.toLowerCase(Locale.ROOT).contains("duplicate")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private boolean isCreatedByForeignKeyViolation(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null && current.getCause() != current) {
+            if (current instanceof java.sql.SQLException sqlException && sqlException.getErrorCode() == 1452) {
+                String message = sqlException.getMessage();
+                if (message != null) {
+                    String normalizedMessage = message.toLowerCase(Locale.ROOT);
+                    if (normalizedMessage.contains("fk_blog_friend_link_created_by")
+                            || (normalizedMessage.contains("blog_friend_link")
+                            && normalizedMessage.contains("created_by")
+                            && normalizedMessage.contains("foreign key"))) {
+                        return true;
+                    }
+                }
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private String normalizeStatus(String status, String defaultStatus) {

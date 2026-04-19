@@ -3,11 +3,11 @@ package org.example.personalblogsystem.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.entity.BlogArticleTag;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.mapper.BlogArticleTagMapper;
 import org.example.personalblogsystem.mapper.BlogTagMapper;
-import org.example.personalblogsystem.mapper.SysUserMapper;
 import org.example.personalblogsystem.service.IBlogTagService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
@@ -19,12 +19,9 @@ import java.util.Locale;
 @Service
 public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> implements IBlogTagService {
 
-    private final SysUserMapper sysUserMapper;
     private final BlogArticleTagMapper blogArticleTagMapper;
 
-    public BlogTagServiceImpl(SysUserMapper sysUserMapper,
-                              BlogArticleTagMapper blogArticleTagMapper) {
-        this.sysUserMapper = sysUserMapper;
+    public BlogTagServiceImpl(BlogArticleTagMapper blogArticleTagMapper) {
         this.blogArticleTagMapper = blogArticleTagMapper;
     }
 
@@ -42,8 +39,8 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
 
     @Override
     public BlogTag createTag(BlogTag tag) {
+        tag.setCreatedBy(AdminAuthContext.requireCurrentUser().getUserId());
         validateTagNameUnique(tag.getTagName(), null);
-        validateCreatedByExists(tag.getCreatedBy());
 
         LocalDateTime now = LocalDateTime.now();
         tag.setId(null);
@@ -103,12 +100,6 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
         Long duplicateCount = count(queryWrapper);
         if (duplicateCount != null && duplicateCount > 0) {
             throw new IllegalArgumentException("tagName already exists");
-        }
-    }
-
-    private void validateCreatedByExists(Long createdBy) {
-        if (createdBy == null || sysUserMapper.selectById(createdBy) == null) {
-            throw new IllegalArgumentException("createdBy does not exist");
         }
     }
 

@@ -3,24 +3,34 @@ package org.example.personalblogsystem.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.dto.LoginRequest;
+import org.example.personalblogsystem.entity.BlogFriendLink;
+import org.example.personalblogsystem.mapper.BlogFriendLinkMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -39,6 +49,9 @@ class BlogFriendLinkControllerTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @MockitoSpyBean
+    private BlogFriendLinkMapper blogFriendLinkMapper;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MockMvc mockMvc;
@@ -46,6 +59,11 @@ class BlogFriendLinkControllerTest {
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
+
+    @AfterEach
+    void tearDown() {
+        reset(blogFriendLinkMapper);
     }
 
     @Test
@@ -57,6 +75,19 @@ class BlogFriendLinkControllerTest {
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.current").value(1))
                 .andExpect(jsonPath("$.data.records.length()").value(1));
+    }
+
+    @Test
+    void shouldRejectUnauthenticatedCreateFriendLink() throws Exception {
+        mockMvc.perform(post("/admin/friend-link")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
+                                randomUrl(),
+                                null,
+                                null,
+                                null))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -89,13 +120,13 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldRejectBlankSiteNameOnCreate() throws Exception {
         mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("   ",
                                 randomUrl(),
                                 null,
                                 null,
-                                null,
-                                2L))))
+                                null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("siteName must not be blank"));
@@ -104,59 +135,42 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldRejectBlankSiteUrlOnCreate() throws Exception {
         mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
                                 "   ",
                                 null,
                                 null,
-                                null,
-                                2L))))
+                                null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("siteUrl must not be blank"));
     }
 
     @Test
-    void shouldRejectMissingCreatedByOnCreate() throws Exception {
-        Map<String, Object> request = friendLinkRequest("Temp Link",
-                randomUrl(),
-                null,
-                null,
-                null,
-                null);
-
+    void shouldAllowCreateWithoutClientCreatedBy() throws Exception {
         mockMvc.perform(post("/admin/friend-link")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("createdBy must not be null"));
-    }
-
-    @Test
-    void shouldRejectInvalidCreatedByOnCreate() throws Exception {
-        mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
                                 randomUrl(),
                                 null,
                                 null,
-                                null,
-                                999L))))
+                                null))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400));
+                .andExpect(jsonPath("$.code").value(200));
     }
 
     @Test
     void shouldRejectDuplicateSiteUrlOnCreate() throws Exception {
         mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("Duplicate Link",
                                 "https://example.com/study-notes",
                                 null,
                                 null,
-                                null,
-                                2L))))
+                                null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("siteUrl already exists"));
@@ -165,13 +179,13 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldRejectInvalidLinkStatusOnCreate() throws Exception {
         mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
                                 randomUrl(),
                                 null,
                                 null,
-                                "ARCHIVED",
-                                2L))))
+                                "ARCHIVED"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("linkStatus must be one of PENDING, APPROVED, REJECTED"));
@@ -180,16 +194,65 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldAcceptLowercaseLinkStatusInTurkishLocaleOnCreate() throws Exception {
         withLocale(new Locale("tr", "TR"), () -> mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
                                 randomUrl(),
                                 "https://example.com/logo.png",
                                 "Temporary friend link",
-                                "approved",
-                                2L))))
+                                "approved"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.linkStatus").value("APPROVED")));
+    }
+
+    @Test
+    void shouldIgnoreSpoofedCreatedByAndPersistAuthenticatedOwner() throws Exception {
+        LoginSession session = loginAndGetSession("root", "123456");
+        String siteUrl = randomUrl();
+        String requestJson = """
+                {
+                  "siteName": "Temp Link",
+                  "siteUrl": "%s",
+                  "siteLogo": "https://example.com/logo.png",
+                  "siteDesc": "Temporary friend link",
+                  "ownerName": "Sample Owner",
+                  "contactEmail": "contact@example.com",
+                  "createdBy": 999
+                }
+                """.formatted(siteUrl);
+
+        JsonNode createdNode = performJson(post("/admin/friend-link")
+                .header("Authorization", "Bearer " + session.accessToken())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestJson));
+
+        long friendLinkId = createdNode.path("data").path("id").asLong();
+        Map<String, Object> persisted = jdbcTemplate.queryForMap(
+                "select site_name, site_url, created_by from blog_friend_link where id = ?",
+                friendLinkId);
+        assertThat(persisted.get("site_name")).isEqualTo("Temp Link");
+        assertThat(persisted.get("site_url")).isEqualTo(siteUrl);
+        assertThat(persisted.get("created_by")).isEqualTo(session.userId());
+    }
+
+    @Test
+    void shouldTranslateCreatedByForeignKeyFailureOnCreateToBadRequest() throws Exception {
+        doThrow(createdByForeignKeyViolation())
+                .when(blogFriendLinkMapper)
+                .insert(any(BlogFriendLink.class));
+
+        mockMvc.perform(post("/admin/friend-link")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(friendLinkRequest("Temp Link",
+                                randomUrl(),
+                                null,
+                                null,
+                                null))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("createdBy is invalid"));
     }
 
     @Test
@@ -199,10 +262,10 @@ class BlogFriendLinkControllerTest {
                 siteUrl,
                 "https://example.com/logo.png",
                 "Temporary friend link",
-                null,
-                2L);
+                null);
 
         JsonNode createdNode = performJson(post("/admin/friend-link")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)));
 
@@ -213,8 +276,7 @@ class BlogFriendLinkControllerTest {
                 siteUrl,
                 "https://example.com/logo-updated.png",
                 "Updated friend link",
-                "Sample Owner",
-                null);
+                "Sample Owner");
         updateRequest.put("linkStatus", "APPROVED");
 
         performJson(put("/admin/friend-link/{id}", friendLinkId)
@@ -248,8 +310,7 @@ class BlogFriendLinkControllerTest {
                                 randomUrl(),
                                 null,
                                 null,
-                                "APPROVED",
-                                2L))))
+                                "APPROVED"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
@@ -265,8 +326,7 @@ class BlogFriendLinkControllerTest {
                                                   String siteUrl,
                                                   String siteLogo,
                                                   String siteDesc,
-                                                  String linkStatus,
-                                                  Long createdBy) {
+                                                  String linkStatus) {
         Map<String, Object> request = new LinkedHashMap<>();
         request.put("siteName", siteName);
         request.put("siteUrl", siteUrl);
@@ -276,9 +336,6 @@ class BlogFriendLinkControllerTest {
         request.put("contactEmail", "contact@example.com");
         if (linkStatus != null) {
             request.put("linkStatus", linkStatus);
-        }
-        if (createdBy != null) {
-            request.put("createdBy", createdBy);
         }
         return request;
     }
@@ -294,6 +351,39 @@ class BlogFriendLinkControllerTest {
         return objectMapper.readTree(result.getResponse().getContentAsString());
     }
 
+    private DataIntegrityViolationException createdByForeignKeyViolation() {
+        return new DataIntegrityViolationException(
+                "translated integrity constraint failure",
+                new SQLIntegrityConstraintViolationException(
+                        "Cannot add or update a child row: a foreign key constraint fails (`blog_friend_link`, CONSTRAINT `fk_blog_friend_link_created_by` FOREIGN KEY (`created_by`) REFERENCES `sys_user` (`id`))",
+                        "23000",
+                        1452));
+    }
+
+    private String loginAndGetAccessToken(String userName, String password) throws Exception {
+        return loginAndGetSession(userName, password).accessToken();
+    }
+
+    private LoginSession loginAndGetSession(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString());
+        return new LoginSession(
+                root.path("data").path("accessToken").asText(),
+                root.path("data").path("id").asLong());
+    }
+
+    private LoginRequest loginRequest(String userName, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUserName(userName);
+        request.setPassword(password);
+        return request;
+    }
+
     private void withLocale(Locale locale, ThrowingRunnable action) throws Exception {
         Locale previous = Locale.getDefault();
         Locale.setDefault(locale);
@@ -307,5 +397,8 @@ class BlogFriendLinkControllerTest {
     @FunctionalInterface
     private interface ThrowingRunnable {
         void run() throws Exception;
+    }
+
+    private record LoginSession(String accessToken, long userId) {
     }
 }

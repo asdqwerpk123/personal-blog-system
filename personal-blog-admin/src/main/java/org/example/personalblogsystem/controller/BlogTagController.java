@@ -1,8 +1,10 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
+import org.example.personalblogsystem.dto.BlogTagCreateRequest;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.service.IBlogTagService;
 import org.springframework.util.StringUtils;
@@ -36,10 +38,11 @@ public class BlogTagController {
         return Result.ok(blogTagService.pageTags(current, size, keyword));
     }
 
+    @AdminAuthenticated
     @PostMapping
-    public Result<BlogTag> create(@RequestBody BlogTag tag) {
-        validateTagForCreate(tag);
-        return Result.ok(blogTagService.createTag(tag));
+    public Result<BlogTag> create(@RequestBody BlogTagCreateRequest request) {
+        validateTagForCreate(request);
+        return Result.ok(blogTagService.createTag(toTag(request)));
     }
 
     @PutMapping("/{id}")
@@ -66,10 +69,9 @@ public class BlogTagController {
         }
     }
 
-    private void validateTagForCreate(BlogTag tag) {
-        validateTagName(tag);
-        if (tag.getCreatedBy() == null) {
-            throw new IllegalArgumentException("createdBy must not be null");
+    private void validateTagForCreate(BlogTagCreateRequest request) {
+        if (request == null || !StringUtils.hasText(request.getTagName())) {
+            throw new IllegalArgumentException("tagName must not be blank");
         }
     }
 
@@ -81,5 +83,12 @@ public class BlogTagController {
         if (tag == null || !StringUtils.hasText(tag.getTagName())) {
             throw new IllegalArgumentException("tagName must not be blank");
         }
+    }
+
+    private BlogTag toTag(BlogTagCreateRequest request) {
+        BlogTag tag = new BlogTag();
+        tag.setTagName(request.getTagName());
+        tag.setDescription(request.getDescription());
+        return tag;
     }
 }

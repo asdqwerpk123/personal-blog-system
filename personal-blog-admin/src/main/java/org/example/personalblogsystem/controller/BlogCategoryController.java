@@ -1,8 +1,10 @@
 package org.example.personalblogsystem.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.example.personalblogsystem.auth.AdminAuthenticated;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
+import org.example.personalblogsystem.dto.BlogCategoryCreateRequest;
 import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.service.IBlogCategoryService;
 import org.springframework.util.StringUtils;
@@ -49,10 +51,11 @@ public class BlogCategoryController {
         return Result.ok(blogCategoryService.pageCategories(current, size, keyword));
     }
 
+    @AdminAuthenticated
     @PostMapping
-    public Result<BlogCategory> create(@RequestBody BlogCategory category) {
-        validateCategoryForCreate(category);
-        return Result.ok(blogCategoryService.createCategory(category));
+    public Result<BlogCategory> create(@RequestBody BlogCategoryCreateRequest request) {
+        validateCategoryForCreate(request);
+        return Result.ok(blogCategoryService.createCategory(toCategory(request)));
     }
 
     @PutMapping("/{id}")
@@ -79,10 +82,9 @@ public class BlogCategoryController {
         }
     }
 
-    private void validateCategoryForCreate(BlogCategory category) {
-        validateCategoryName(category);
-        if (category.getCreatedBy() == null) {
-            throw new IllegalArgumentException("createdBy must not be null");
+    private void validateCategoryForCreate(BlogCategoryCreateRequest request) {
+        if (request == null || !StringUtils.hasText(request.getCategoryName())) {
+            throw new IllegalArgumentException("categoryName must not be blank");
         }
     }
 
@@ -94,5 +96,13 @@ public class BlogCategoryController {
         if (category == null || !StringUtils.hasText(category.getCategoryName())) {
             throw new IllegalArgumentException("categoryName must not be blank");
         }
+    }
+
+    private BlogCategory toCategory(BlogCategoryCreateRequest request) {
+        BlogCategory category = new BlogCategory();
+        category.setCategoryName(request.getCategoryName());
+        category.setDescription(request.getDescription());
+        category.setSortNo(request.getSortNo());
+        return category;
     }
 }
