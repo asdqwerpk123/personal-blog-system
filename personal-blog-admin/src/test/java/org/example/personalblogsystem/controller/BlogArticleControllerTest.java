@@ -2,6 +2,7 @@ package org.example.personalblogsystem.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.sql.SQLIntegrityConstraintViolationException;
+import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -188,6 +190,40 @@ class BlogArticleControllerTest {
     }
 
     @Test
+    void shouldOverrideSpoofedPublishedTimeAndServerManagedCountsOnCreate() throws Exception {
+        LocalDateTime spoofedPublishedTime = LocalDateTime.of(2001, 1, 1, 0, 0);
+        ObjectNode article = objectMapper.createObjectNode();
+        article.put("articleTitle", "Published spoof");
+        article.put("articleSlug", randomSlug());
+        article.put("articleSummary", "summary");
+        article.put("coverUrl", "https://example.com/cover.png");
+        article.put("articleContent", "published content");
+        article.put("categoryId", 1L);
+        article.put("articleStatus", "PUBLISHED");
+        article.put("topFlag", true);
+        article.put("allowComment", false);
+        article.put("publishedTime", spoofedPublishedTime.toString());
+        article.put("viewCount", 987);
+        article.put("likeCount", 654);
+
+        JsonNode createdNode = performJson(post("/admin/article")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(article)));
+
+        long articleId = createdNode.path("data").path("id").asLong();
+        assertThat(articleId).isPositive();
+
+        BlogArticle persisted = blogArticleMapper.selectById(articleId);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getArticleStatus()).isEqualTo("PUBLISHED");
+        assertThat(persisted.getPublishedTime()).isNotNull();
+        assertThat(persisted.getPublishedTime()).isNotEqualTo(spoofedPublishedTime);
+        assertThat(persisted.getViewCount()).isZero();
+        assertThat(persisted.getLikeCount()).isZero();
+    }
+
+    @Test
     void shouldReturnNotFoundWhenUpdatingMissingArticle() throws Exception {
         BlogArticle article = buildArticle("Missing", randomSlug(), "draft content", 5L);
 
@@ -197,6 +233,51 @@ class BlogArticleControllerTest {
                         .content(objectMapper.writeValueAsString(article)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
+    }
+
+    @Test
+    void shouldPreserveExistingPublishedTimeWhenUpdatingArticle() throws Exception {
+        BlogArticle created = buildArticle(
+                "Temp article " + UUID.randomUUID().toString().substring(0, 8),
+                randomSlug(),
+                "Initial content",
+                5L);
+        created.setArticleSummary("Initial summary");
+        created.setCategoryId(1L);
+        created.setArticleStatus("PUBLISHED");
+
+        long articleId = createArticle(created);
+        BlogArticle persistedBeforeUpdate = blogArticleMapper.selectById(articleId);
+        assertThat(persistedBeforeUpdate).isNotNull();
+        assertThat(persistedBeforeUpdate.getPublishedTime()).isNotNull();
+
+        LocalDateTime originalPublishedTime = persistedBeforeUpdate.getPublishedTime();
+        LocalDateTime spoofedPublishedTime = originalPublishedTime.plusYears(1);
+
+        ObjectNode updateRequest = objectMapper.createObjectNode();
+        updateRequest.put("articleTitle", created.getArticleTitle() + " updated");
+        updateRequest.put("articleSlug", created.getArticleSlug());
+        updateRequest.put("articleSummary", "Updated summary");
+        updateRequest.put("coverUrl", "https://example.com/updated-cover.png");
+        updateRequest.put("articleContent", "Updated content");
+        updateRequest.put("categoryId", 2L);
+        updateRequest.put("topFlag", true);
+        updateRequest.put("allowComment", false);
+        updateRequest.put("publishedTime", spoofedPublishedTime.toString());
+
+        JsonNode updateResponse = performJson(put("/admin/article/{id}", articleId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateRequest)));
+
+        assertThat(updateResponse.path("code").asInt()).isEqualTo(200);
+
+        BlogArticle persistedAfterUpdate = blogArticleMapper.selectById(articleId);
+        assertThat(persistedAfterUpdate).isNotNull();
+        assertThat(persistedAfterUpdate.getArticleSummary()).isEqualTo("Updated summary");
+        assertThat(persistedAfterUpdate.getCoverUrl()).isEqualTo("https://example.com/updated-cover.png");
+        assertThat(persistedAfterUpdate.getPublishedTime()).isEqualTo(originalPublishedTime);
+        assertThat(persistedAfterUpdate.getPublishedTime()).isNotEqualTo(spoofedPublishedTime);
     }
 
     @Test

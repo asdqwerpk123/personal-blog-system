@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
+import org.example.personalblogsystem.dto.BlogArticleCreateRequest;
+import org.example.personalblogsystem.dto.BlogArticleUpdateRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.service.IBlogArticleTagService;
@@ -58,8 +60,9 @@ public class BlogArticleController {
     }
 
     @PostMapping
-    public Result<BlogArticle> create(@RequestBody BlogArticle article) {
-        validateArticleForCreate(article);
+    public Result<BlogArticle> create(@RequestBody BlogArticleCreateRequest request) {
+        validateArticleForCreate(request);
+        BlogArticle article = toBlogArticle(request);
         return Result.ok(blogArticleService.createArticle(article));
     }
 
@@ -70,8 +73,9 @@ public class BlogArticleController {
     }
 
     @PutMapping("/{id}")
-    public Result<BlogArticle> update(@PathVariable Long id, @RequestBody BlogArticle article) {
-        validateArticleForUpdate(article);
+    public Result<BlogArticle> update(@PathVariable Long id, @RequestBody BlogArticleUpdateRequest request) {
+        validateArticleForUpdate(request);
+        BlogArticle article = toBlogArticle(request);
         BlogArticle updatedArticle = blogArticleService.updateArticle(id, article);
         return updatedArticle == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedArticle);
     }
@@ -100,24 +104,84 @@ public class BlogArticleController {
         }
     }
 
-    private void validateArticleForCreate(BlogArticle article) {
-        validateArticle(article);
+    private void validateArticleForCreate(BlogArticleCreateRequest request) {
+        validateArticle(request);
     }
 
-    private void validateArticleForUpdate(BlogArticle article) {
-        validateArticle(article);
+    private void validateArticleForUpdate(BlogArticleUpdateRequest request) {
+        validateArticle(request);
     }
 
-    private void validateArticle(BlogArticle article) {
-        if (article == null || !StringUtils.hasText(article.getArticleTitle())) {
+    private void validateArticle(BlogArticleCreateRequest request) {
+        if (request == null || !StringUtils.hasText(request.getArticleTitle())) {
             throw new IllegalArgumentException("articleTitle must not be blank");
         }
-        if (!StringUtils.hasText(article.getArticleSlug())) {
+        if (!StringUtils.hasText(request.getArticleSlug())) {
             throw new IllegalArgumentException("articleSlug must not be blank");
         }
-        if (!StringUtils.hasText(article.getArticleContent())) {
+        if (!StringUtils.hasText(request.getArticleContent())) {
             throw new IllegalArgumentException("articleContent must not be blank");
         }
+    }
+
+    private void validateArticle(BlogArticleUpdateRequest request) {
+        if (request == null || !StringUtils.hasText(request.getArticleTitle())) {
+            throw new IllegalArgumentException("articleTitle must not be blank");
+        }
+        if (!StringUtils.hasText(request.getArticleSlug())) {
+            throw new IllegalArgumentException("articleSlug must not be blank");
+        }
+        if (!StringUtils.hasText(request.getArticleContent())) {
+            throw new IllegalArgumentException("articleContent must not be blank");
+        }
+    }
+
+    private BlogArticle toBlogArticle(BlogArticleCreateRequest request) {
+        BlogArticle article = new BlogArticle();
+        populateWritableFields(article,
+                request.getArticleTitle(),
+                request.getArticleSlug(),
+                request.getArticleSummary(),
+                request.getCoverUrl(),
+                request.getArticleContent(),
+                request.getCategoryId(),
+                request.getTopFlag(),
+                request.getAllowComment());
+        article.setArticleStatus(request.getArticleStatus());
+        return article;
+    }
+
+    private BlogArticle toBlogArticle(BlogArticleUpdateRequest request) {
+        BlogArticle article = new BlogArticle();
+        populateWritableFields(article,
+                request.getArticleTitle(),
+                request.getArticleSlug(),
+                request.getArticleSummary(),
+                request.getCoverUrl(),
+                request.getArticleContent(),
+                request.getCategoryId(),
+                request.getTopFlag(),
+                request.getAllowComment());
+        return article;
+    }
+
+    private void populateWritableFields(BlogArticle article,
+                                        String articleTitle,
+                                        String articleSlug,
+                                        String articleSummary,
+                                        String coverUrl,
+                                        String articleContent,
+                                        Long categoryId,
+                                        Boolean topFlag,
+                                        Boolean allowComment) {
+        article.setArticleTitle(articleTitle);
+        article.setArticleSlug(articleSlug);
+        article.setArticleSummary(articleSummary);
+        article.setCoverUrl(coverUrl);
+        article.setArticleContent(articleContent);
+        article.setCategoryId(categoryId);
+        article.setTopFlag(topFlag);
+        article.setAllowComment(allowComment);
     }
 
     private void validateStatus(String status) {

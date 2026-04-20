@@ -63,6 +63,7 @@ class BlogTagControllerTest {
     @Test
     void shouldReturnPagedTags() throws Exception {
         mockMvc.perform(get("/admin/tag/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -76,6 +77,7 @@ class BlogTagControllerTest {
     @Test
     void shouldFilterPagedTagsByKeyword() throws Exception {
         mockMvc.perform(get("/admin/tag/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10")
                         .param("keyword", "Vue"))
@@ -88,6 +90,7 @@ class BlogTagControllerTest {
     @Test
     void shouldRejectInvalidTagPageCurrent() throws Exception {
         mockMvc.perform(get("/admin/tag/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "0")
                         .param("size", "2"))
                 .andExpect(status().isOk())
@@ -98,6 +101,7 @@ class BlogTagControllerTest {
     @Test
     void shouldRejectInvalidTagPageSize() throws Exception {
         mockMvc.perform(get("/admin/tag/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "101"))
                 .andExpect(status().isOk())
@@ -231,6 +235,7 @@ class BlogTagControllerTest {
                 .updateById(any(BlogTag.class));
 
         mockMvc.perform(put("/admin/tag/{id}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -286,6 +291,7 @@ class BlogTagControllerTest {
         updateRequest.setDescription("updated");
 
         performJson(put("/admin/tag/{id}", tagId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)));
 
@@ -294,7 +300,8 @@ class BlogTagControllerTest {
         assertThat(updated.getTagName()).isEqualTo(tagName + "-updated");
         assertThat(updated.getDescription()).isEqualTo("updated");
 
-        mockMvc.perform(delete("/admin/tag/{id}", tagId))
+        mockMvc.perform(delete("/admin/tag/{id}", tagId)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -303,7 +310,8 @@ class BlogTagControllerTest {
 
     @Test
     void shouldRejectDeletingReferencedTag() throws Exception {
-        mockMvc.perform(delete("/admin/tag/{id}", 1L))
+        mockMvc.perform(delete("/admin/tag/{id}", 1L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("tag is referenced by articles"));
@@ -316,6 +324,7 @@ class BlogTagControllerTest {
         updateRequest.setDescription("Missing");
 
         mockMvc.perform(put("/admin/tag/{id}", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -324,7 +333,8 @@ class BlogTagControllerTest {
 
     @Test
     void shouldReturnNotFoundWhenDeletingMissingTag() throws Exception {
-        mockMvc.perform(delete("/admin/tag/{id}", 999L))
+        mockMvc.perform(delete("/admin/tag/{id}", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }

@@ -64,8 +64,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         article.setArticleStatus(normalizeStatus(article.getArticleStatus(), "DRAFT"));
         article.setTopFlag(article.getTopFlag() != null && article.getTopFlag());
         article.setAllowComment(article.getAllowComment() == null || article.getAllowComment());
-        article.setViewCount(article.getViewCount() == null ? 0 : article.getViewCount());
-        article.setLikeCount(article.getLikeCount() == null ? 0 : article.getLikeCount());
+        article.setPublishedTime(null);
+        article.setViewCount(0);
+        article.setLikeCount(0);
         article.setCreateTime(now);
         article.setUpdateTime(now);
         article.setDeleted(false);
@@ -84,7 +85,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             return null;
         }
 
-        article.setAuthorId(existing.getAuthorId());
+        Long preservedAuthorId = existing.getAuthorId();
+        LocalDateTime preservedPublishedTime = existing.getPublishedTime();
+        article.setAuthorId(preservedAuthorId);
         validateArticleReferences(article, id);
         existing.setArticleTitle(article.getArticleTitle());
         existing.setArticleSlug(article.getArticleSlug());
@@ -94,6 +97,8 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         existing.setCategoryId(article.getCategoryId());
         existing.setTopFlag(article.getTopFlag() == null ? existing.getTopFlag() : article.getTopFlag());
         existing.setAllowComment(article.getAllowComment() == null ? existing.getAllowComment() : article.getAllowComment());
+        existing.setAuthorId(preservedAuthorId);
+        existing.setPublishedTime(preservedPublishedTime);
         existing.setUpdateTime(LocalDateTime.now());
         try {
             return updateById(existing) ? getById(id) : null;

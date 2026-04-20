@@ -69,6 +69,7 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldReturnPagedFriendLinks() throws Exception {
         mockMvc.perform(get("/admin/friend-link/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -93,6 +94,7 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldRejectInvalidFriendLinkPageCurrent() throws Exception {
         mockMvc.perform(get("/admin/friend-link/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "0")
                         .param("size", "10"))
                 .andExpect(status().isOk())
@@ -102,6 +104,7 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldRejectInvalidFriendLinkPageSize() throws Exception {
         mockMvc.perform(get("/admin/friend-link/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "101"))
                 .andExpect(status().isOk())
@@ -111,6 +114,7 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldRejectNonPositiveFriendLinkPageSize() throws Exception {
         mockMvc.perform(get("/admin/friend-link/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "0"))
                 .andExpect(status().isOk())
@@ -280,6 +284,7 @@ class BlogFriendLinkControllerTest {
         updateRequest.put("linkStatus", "APPROVED");
 
         performJson(put("/admin/friend-link/{id}", friendLinkId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)));
 
@@ -291,7 +296,8 @@ class BlogFriendLinkControllerTest {
         assertThat(updatedRow.get("site_url")).isEqualTo(siteUrl);
         assertThat(updatedRow.get("link_status")).isEqualTo("APPROVED");
 
-        mockMvc.perform(delete("/admin/friend-link/{id}", friendLinkId))
+        mockMvc.perform(delete("/admin/friend-link/{id}", friendLinkId)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
@@ -305,6 +311,7 @@ class BlogFriendLinkControllerTest {
     @Test
     void shouldReturnNotFoundWhenUpdatingMissingFriendLink() throws Exception {
         mockMvc.perform(put("/admin/friend-link/{id}", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(friendLinkRequest("Missing Link",
                                 randomUrl(),
@@ -317,7 +324,8 @@ class BlogFriendLinkControllerTest {
 
     @Test
     void shouldReturnNotFoundWhenDeletingMissingFriendLink() throws Exception {
-        mockMvc.perform(delete("/admin/friend-link/{id}", 999L))
+        mockMvc.perform(delete("/admin/friend-link/{id}", 999L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(404));
     }
