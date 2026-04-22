@@ -52,7 +52,10 @@ class SysOperationLogControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.current").value(1))
-                .andExpect(jsonPath("$.data.records.length()").value(3));
+                .andExpect(jsonPath("$.data.records.length()").value(4))
+                .andExpect(jsonPath("$.data.records[0].targetType").value("AUTH"))
+                .andExpect(jsonPath("$.data.records[0].actionType").value("LOGIN"))
+                .andExpect(jsonPath("$.data.records[0].actionResult").value("SUCCESS"));
     }
 
     @Test

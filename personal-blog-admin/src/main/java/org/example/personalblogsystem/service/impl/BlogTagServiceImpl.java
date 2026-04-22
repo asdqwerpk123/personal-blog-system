@@ -9,6 +9,7 @@ import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.mapper.BlogArticleTagMapper;
 import org.example.personalblogsystem.mapper.BlogTagMapper;
 import org.example.personalblogsystem.service.IBlogTagService;
+import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
@@ -20,9 +21,12 @@ import java.util.Locale;
 public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> implements IBlogTagService {
 
     private final BlogArticleTagMapper blogArticleTagMapper;
+    private final OperationLogRecordService operationLogRecordService;
 
-    public BlogTagServiceImpl(BlogArticleTagMapper blogArticleTagMapper) {
+    public BlogTagServiceImpl(BlogArticleTagMapper blogArticleTagMapper,
+                              OperationLogRecordService operationLogRecordService) {
         this.blogArticleTagMapper = blogArticleTagMapper;
+        this.operationLogRecordService = operationLogRecordService;
     }
 
     @Override
@@ -52,6 +56,7 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
         } catch (DataAccessException exception) {
             throw translateDuplicateTagNameException(exception);
         }
+        operationLogRecordService.recordSuccess("TAG", tag.getId(), "CREATE", "Create tag success: " + tag.getTagName());
         return getById(tag.getId());
     }
 
@@ -67,7 +72,11 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
         existing.setDescription(tag.getDescription());
         existing.setUpdateTime(LocalDateTime.now());
         try {
-            return updateById(existing) ? getById(id) : null;
+            if (!updateById(existing)) {
+                return null;
+            }
+            operationLogRecordService.recordSuccess("TAG", id, "UPDATE", "Update tag success: " + existing.getTagName());
+            return getById(id);
         } catch (DataAccessException exception) {
             throw translateDuplicateTagNameException(exception);
         }
@@ -87,7 +96,11 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
             throw new IllegalArgumentException("tag is referenced by articles");
         }
 
-        return removeById(id);
+        boolean deleted = removeById(id);
+        if (deleted) {
+            operationLogRecordService.recordSuccess("TAG", id, "DELETE", "Delete tag success: " + existing.getTagName());
+        }
+        return deleted;
     }
 
     private void validateTagNameUnique(String tagName, Long currentTagId) {

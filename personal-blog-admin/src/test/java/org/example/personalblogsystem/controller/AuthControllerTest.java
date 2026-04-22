@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,6 +47,8 @@ class AuthControllerTest {
 
     @Test
     void shouldLoginWithValidCredentials() throws Exception {
+        jdbcTemplate.update("delete from sys_operation_log");
+
         MvcResult result = mockMvc.perform(post("/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest("root", "123456"))))
@@ -70,6 +73,18 @@ class AuthControllerTest {
         org.assertj.core.api.Assertions.assertThat(principal.getUserName()).isEqualTo("root");
         org.assertj.core.api.Assertions.assertThat(principal.getRoleId()).isEqualTo(1L);
         org.assertj.core.api.Assertions.assertThat(principal.getRoleCode()).isEqualTo("SUPER_ADMIN");
+
+        Integer logCount = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where operator_user_id = 1
+                          and target_type = 'AUTH'
+                          and target_id = 1
+                          and action_type = 'LOGIN'
+                          and action_result = 'SUCCESS'
+                          and action_detail like '%Login success%'
+                        """,
+                Integer.class);
+        assertThat(logCount).isEqualTo(1);
     }
 
     @Test
@@ -94,12 +109,50 @@ class AuthControllerTest {
 
     @Test
     void shouldRejectWrongPasswordOnLogin() throws Exception {
+        jdbcTemplate.update("delete from sys_operation_log");
+
         mockMvc.perform(post("/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest("root", "bad-password"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("username or password is incorrect"));
+
+        Integer logCount = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where operator_user_id = 1
+                          and target_type = 'AUTH'
+                          and target_id = 1
+                          and action_type = 'LOGIN'
+                          and action_result = 'FAILED'
+                          and action_detail like '%Login failed%'
+                        """,
+                Integer.class);
+        assertThat(logCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectNormalUserOnAdminLogin() throws Exception {
+        jdbcTemplate.update("delete from sys_operation_log");
+
+        mockMvc.perform(post("/admin/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest("jerry", "123456"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist());
+
+        Integer logCount = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where operator_user_id = 5
+                          and target_type = 'AUTH'
+                          and target_id = 5
+                          and action_type = 'LOGIN'
+                          and action_result = 'FAILED'
+                          and action_detail like '%Login denied%'
+                        """,
+                Integer.class);
+        assertThat(logCount).isEqualTo(1);
     }
 
     @Test
@@ -128,12 +181,17 @@ class AuthControllerTest {
 
     @Test
     void shouldRejectMissingUserOnLogin() throws Exception {
+        jdbcTemplate.update("delete from sys_operation_log");
+
         mockMvc.perform(post("/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest("missing-user", "123456"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("username or password is incorrect"));
+
+        Integer logCount = jdbcTemplate.queryForObject("select count(*) from sys_operation_log", Integer.class);
+        assertThat(logCount).isZero();
     }
 
     private LoginRequest loginRequest(String userName, String password) {

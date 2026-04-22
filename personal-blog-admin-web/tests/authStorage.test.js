@@ -29,12 +29,22 @@ describe('authStorage', () => {
     persistAuth({
       token: 'local-token',
       userName: 'admin',
+      userId: 7,
+      nickName: '站长',
+      roleId: 1,
+      roleCode: 'SUPER_ADMIN',
+      roleName: '超级管理员',
       remember: true
     });
 
     expect(getStoredAuth()).toEqual({
       token: 'local-token',
       userName: 'admin',
+      userId: '7',
+      nickName: '站长',
+      roleId: '1',
+      roleCode: 'SUPER_ADMIN',
+      roleName: '超级管理员',
       remember: true
     });
     expect(sessionStorage.getItem('PB_ADMIN_TOKEN')).toBeNull();
@@ -44,12 +54,22 @@ describe('authStorage', () => {
     persistAuth({
       token: 'session-token',
       userName: 'editor',
+      userId: 8,
+      nickName: '编辑',
+      roleId: 2,
+      roleCode: 'ADMIN',
+      roleName: '管理员',
       remember: false
     });
 
     expect(getStoredAuth()).toEqual({
       token: 'session-token',
       userName: 'editor',
+      userId: '8',
+      nickName: '编辑',
+      roleId: '2',
+      roleCode: 'ADMIN',
+      roleName: '管理员',
       remember: false
     });
     expect(localStorage.getItem('PB_ADMIN_TOKEN')).toBeNull();
@@ -59,6 +79,11 @@ describe('authStorage', () => {
     persistAuth({
       token: 'old-token',
       userName: 'admin',
+      userId: 7,
+      nickName: '站长',
+      roleId: 1,
+      roleCode: 'SUPER_ADMIN',
+      roleName: '超级管理员',
       remember: true
     });
 
@@ -67,7 +92,46 @@ describe('authStorage', () => {
     expect(getStoredAuth()).toEqual({
       token: '',
       userName: '',
+      userId: '',
+      nickName: '',
+      roleId: '',
+      roleCode: '',
+      roleName: '',
       remember: true
+    });
+  });
+
+  it('extracts admin profile fields from login response data', () => {
+    const response = {
+      data: {
+        accessToken: 'token',
+        id: 9,
+        userName: 'alice',
+        nickName: 'Alice',
+        roleId: 3,
+        roleCode: 'USER',
+        roleName: '普通用户'
+      }
+    };
+
+    persistAuth({
+      token: extractAccessToken(response),
+      userName: response.data.userName,
+      userId: response.data.id,
+      nickName: response.data.nickName,
+      roleId: response.data.roleId,
+      roleCode: response.data.roleCode,
+      roleName: response.data.roleName,
+      remember: true
+    });
+
+    expect(getStoredAuth()).toMatchObject({
+      userId: '9',
+      userName: 'alice',
+      nickName: 'Alice',
+      roleId: '3',
+      roleCode: 'USER',
+      roleName: '普通用户'
     });
   });
 });

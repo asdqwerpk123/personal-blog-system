@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.auth.AdminAuthPrincipal;
+import org.example.personalblogsystem.auth.JwtTokenService;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
 import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
@@ -53,6 +55,9 @@ class BlogArticleControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private JwtTokenService jwtTokenService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -425,11 +430,11 @@ class BlogArticleControllerTest {
 
     @Test
     void shouldIgnoreSpoofedAuthorOnCreate() throws Exception {
-        BlogArticle article = buildArticle("Spoofed author", randomSlug(), "draft content", 1L);
+        BlogArticle article = buildArticle("Spoofed author", randomSlug(), "draft content", 5L);
         article.setCategoryId(1L);
 
         JsonNode createdNode = performJson(post("/admin/article")
-                .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456"))
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(article)));
 
@@ -438,7 +443,7 @@ class BlogArticleControllerTest {
 
         BlogArticle persisted = blogArticleMapper.selectById(articleId);
         assertThat(persisted).isNotNull();
-        assertThat(persisted.getAuthorId()).isEqualTo(5L);
+        assertThat(persisted.getAuthorId()).isEqualTo(1L);
     }
 
     @Test
@@ -454,7 +459,7 @@ class BlogArticleControllerTest {
         updateRequest.setAllowComment(false);
 
         mockMvc.perform(put("/admin/article/{id}", 1L)
-                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456"))
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
@@ -698,12 +703,11 @@ class BlogArticleControllerTest {
     }
 
     @Test
-    void shouldRejectDeleteWhenOperatorLacksPermission() throws Exception {
+    void shouldRejectNormalUserDeleteThroughAdminEndpoint() throws Exception {
         mockMvc.perform(delete("/admin/article/{id}", 1L)
-                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456")))
+                        .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("Normal user can only delete own article."));
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     private BlogArticle buildArticle(String title, String slug, String content, Long authorId) {
@@ -740,6 +744,11 @@ class BlogArticleControllerTest {
                 .path("data")
                 .path("accessToken")
                 .asText();
+    }
+
+    private String issueNormalUserAccessToken() {
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(5L, "jerry", 3L, "USER");
+        return jwtTokenService.issueAccessToken(principal, jwtTokenService.calculateAccessTokenExpiresAt());
     }
 
     private LoginRequest loginRequest(String userName, String password) {

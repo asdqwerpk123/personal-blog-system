@@ -10,6 +10,7 @@ import org.example.personalblogsystem.mapper.BlogArticleMapper;
 import org.example.personalblogsystem.mapper.BlogCategoryMapper;
 import org.example.personalblogsystem.mapper.SysUserMapper;
 import org.example.personalblogsystem.service.IBlogCategoryService;
+import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
@@ -31,11 +32,14 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
 
     private final SysUserMapper sysUserMapper;
     private final BlogArticleMapper blogArticleMapper;
+    private final OperationLogRecordService operationLogRecordService;
 
     public BlogCategoryServiceImpl(SysUserMapper sysUserMapper,
-                                   BlogArticleMapper blogArticleMapper) {
+                                   BlogArticleMapper blogArticleMapper,
+                                   OperationLogRecordService operationLogRecordService) {
         this.sysUserMapper = sysUserMapper;
         this.blogArticleMapper = blogArticleMapper;
+        this.operationLogRecordService = operationLogRecordService;
     }
 
     @Override
@@ -74,6 +78,7 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
         }
+        operationLogRecordService.recordSuccess("CATEGORY", category.getId(), "CREATE", "Create category success: " + category.getCategoryName());
         return getById(category.getId());
     }
 
@@ -92,7 +97,11 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         }
         existing.setUpdateTime(LocalDateTime.now());
         try {
-            return updateById(existing) ? getById(id) : null;
+            if (!updateById(existing)) {
+                return null;
+            }
+            operationLogRecordService.recordSuccess("CATEGORY", id, "UPDATE", "Update category success: " + existing.getCategoryName());
+            return getById(id);
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
         }
@@ -111,7 +120,11 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
             throw new IllegalArgumentException("category is referenced by articles");
         }
 
-        return removeById(id);
+        boolean deleted = removeById(id);
+        if (deleted) {
+            operationLogRecordService.recordSuccess("CATEGORY", id, "DELETE", "Delete category success: " + existing.getCategoryName());
+        }
+        return deleted;
     }
 
     private void validateCreatedByExists(Long createdBy) {

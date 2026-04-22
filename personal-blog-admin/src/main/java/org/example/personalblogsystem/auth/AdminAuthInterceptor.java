@@ -37,7 +37,11 @@ public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
             throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
         }
 
-        AdminAuthContext.set(jwtTokenService.parseAccessToken(token));
+        AdminAuthPrincipal principal = jwtTokenService.parseAccessToken(token);
+        if (!isAdminRole(principal.getRoleCode())) {
+            throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
+        }
+        AdminAuthContext.set(principal);
         return true;
     }
 
@@ -53,5 +57,9 @@ public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
 
     private boolean isPublicAdminEndpoint(HttpServletRequest request) {
         return "POST".equalsIgnoreCase(request.getMethod()) && ADMIN_LOGIN_PATH.equals(request.getRequestURI());
+    }
+
+    private boolean isAdminRole(String roleCode) {
+        return "SUPER_ADMIN".equalsIgnoreCase(roleCode) || "ADMIN".equalsIgnoreCase(roleCode);
     }
 }

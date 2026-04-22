@@ -78,6 +78,48 @@ class AdminAuthInterceptorTest {
     }
 
     @Test
+    void shouldRejectUserRoleForUserManagementEndpoint() {
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(7L, "tom", 3L, "USER");
+        String token = jwtTokenService.issueAccessToken(principal);
+
+        HandlerMethod handlerMethod = new HandlerMethod(typeAnnotatedController, typeAnnotatedMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/user/1");
+        request.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        BlogException exception = assertThrows(BlogException.class, () -> interceptor.preHandle(request, response, handlerMethod));
+        assertThat(exception.getCode()).isEqualTo(ResultCodeEnum.UNAUTHORIZED.getCode());
+    }
+
+    @Test
+    void shouldRejectUserRoleForAnyAdminEndpoint() {
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(7L, "tom", 3L, "USER");
+        String token = jwtTokenService.issueAccessToken(principal);
+
+        HandlerMethod handlerMethod = new HandlerMethod(typeAnnotatedController, typeAnnotatedMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/tag/page");
+        request.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        BlogException exception = assertThrows(BlogException.class, () -> interceptor.preHandle(request, response, handlerMethod));
+        assertThat(exception.getCode()).isEqualTo(ResultCodeEnum.UNAUTHORIZED.getCode());
+    }
+
+    @Test
+    void shouldRejectUnknownRoleForUserManagementEndpoint() {
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(7L, "ghost", 99L, "GUEST");
+        String token = jwtTokenService.issueAccessToken(principal);
+
+        HandlerMethod handlerMethod = new HandlerMethod(typeAnnotatedController, typeAnnotatedMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/admin/user/1");
+        request.addHeader("Authorization", "Bearer " + token);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        BlogException exception = assertThrows(BlogException.class, () -> interceptor.preHandle(request, response, handlerMethod));
+        assertThat(exception.getCode()).isEqualTo(ResultCodeEnum.UNAUTHORIZED.getCode());
+    }
+
+    @Test
     void shouldAcceptLowercaseBearerSchemeForAnnotatedHandler() throws Exception {
         AdminAuthPrincipal principal = new AdminAuthPrincipal(7L, "root", 1L, "SUPER_ADMIN");
         String token = jwtTokenService.issueAccessToken(principal);
