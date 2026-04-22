@@ -8,6 +8,7 @@ import org.example.personalblogsystem.entity.BlogFriendLink;
 import org.example.personalblogsystem.mapper.BlogFriendLinkMapper;
 import org.example.personalblogsystem.mapper.SysUserMapper;
 import org.example.personalblogsystem.service.IBlogFriendLinkService;
+import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -23,11 +24,14 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
 
     private final JdbcTemplate jdbcTemplate;
     private final SysUserMapper sysUserMapper;
+    private final OperationLogRecordService operationLogRecordService;
 
     public BlogFriendLinkServiceImpl(JdbcTemplate jdbcTemplate,
-                                     SysUserMapper sysUserMapper) {
+                                     SysUserMapper sysUserMapper,
+                                     OperationLogRecordService operationLogRecordService) {
         this.jdbcTemplate = jdbcTemplate;
         this.sysUserMapper = sysUserMapper;
+        this.operationLogRecordService = operationLogRecordService;
     }
 
     @Override
@@ -73,7 +77,9 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
         }
-        return getBySiteUrl(normalizedSiteUrl);
+        BlogFriendLink created = getBySiteUrl(normalizedSiteUrl);
+        operationLogRecordService.recordSuccess("FRIEND_LINK", created.getId(), "CREATE", "Create friend link success: " + created.getSiteName());
+        return created;
     }
 
     @Override
@@ -102,7 +108,11 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         existing.setLinkStatus(normalizedStatus);
         existing.setUpdateTime(LocalDateTime.now());
         try {
-            return updateById(existing) ? getById(id) : null;
+            if (!updateById(existing)) {
+                return null;
+            }
+            operationLogRecordService.recordSuccess("FRIEND_LINK", id, "UPDATE", "Update friend link success: " + existing.getSiteName());
+            return getById(id);
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
         }
@@ -114,7 +124,11 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         if (existing == null) {
             return false;
         }
-        return removeById(id);
+        boolean deleted = removeById(id);
+        if (deleted) {
+            operationLogRecordService.recordSuccess("FRIEND_LINK", id, "DELETE", "Delete friend link success: " + existing.getSiteName());
+        }
+        return deleted;
     }
 
     private void validateFriendLinkForCreate(BlogFriendLink friendLink) {

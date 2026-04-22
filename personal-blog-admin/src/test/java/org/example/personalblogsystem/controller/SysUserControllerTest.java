@@ -7,10 +7,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+
+import java.util.Map;
+import java.util.LinkedHashMap;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -19,6 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest(classes = PersonalBlogSystemApplication.class,
         properties = "spring.profiles.active=test")
+@Transactional
 class SysUserControllerTest {
 
     @Autowired
@@ -54,7 +60,29 @@ class SysUserControllerTest {
                 .andExpect(jsonPath("$.data.current").value(1))
                 .andExpect(jsonPath("$.data.size").value(2))
                 .andExpect(jsonPath("$.data.records.length()").value(2))
-                .andExpect(jsonPath("$.data.total").value(5));
+                .andExpect(jsonPath("$.data.total").value(4));
+    }
+
+    @Test
+    void shouldReturnOnlyNormalUsersForAdminPagedUsers() throws Exception {
+        mockMvc.perform(get("/admin/user/page")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("admin_zhang", "123456"))
+                        .param("current", "1")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.total").value(2))
+                .andExpect(jsonPath("$.data.records.length()").value(2))
+                .andExpect(jsonPath("$.data.records[0].roleCode").value("USER"))
+                .andExpect(jsonPath("$.data.records[1].roleCode").value("USER"));
+    }
+
+    @Test
+    void shouldRejectAdminReadingAnotherAdmin() throws Exception {
+        mockMvc.perform(get("/admin/user/2")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("admin_zhang", "123456")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400));
     }
 
     @Test
@@ -63,11 +91,41 @@ class SysUserControllerTest {
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10")
-                        .param("keyword", "root"))
+                        .param("keyword", "tom"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.records.length()").value(1))
-                .andExpect(jsonPath("$.data.records[0].userName").value("root"));
+                .andExpect(jsonPath("$.data.records[0].userName").value("tom"));
+    }
+
+    @Test
+    void shouldCreateUserWithDefaultEnabledStatus() throws Exception {
+        mockMvc.perform(post("/admin/user")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "userName", "new_admin",
+                                "password", "123456",
+                                "nickName", "New Admin",
+                                "email", "new_admin@blog.local",
+                                "phone", "13800000006",
+                                "avatarUrl", "https://example.com/avatar.png",
+                                "introduction", "created from test",
+                                "roleId", 2
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.userName").value("new_admin"))
+                .andExpect(jsonPath("$.data.nickName").value("New Admin"))
+                .andExpect(jsonPath("$.data.email").value("new_admin@blog.local"))
+                .andExpect(jsonPath("$.data.phone").value("13800000006"))
+                .andExpect(jsonPath("$.data.avatarUrl").value("https://example.com/avatar.png"))
+                .andExpect(jsonPath("$.data.introduction").value("created from test"))
+                .andExpect(jsonPath("$.data.roleId").value(2))
+                .andExpect(jsonPath("$.data.roleCode").value("ADMIN"))
+                .andExpect(jsonPath("$.data.roleName").value("管理员"))
+                .andExpect(jsonPath("$.data.userStatus").value("ENABLED"))
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
     }
 
     @Test

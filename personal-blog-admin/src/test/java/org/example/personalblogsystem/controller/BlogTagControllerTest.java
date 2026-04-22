@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -45,6 +46,9 @@ class BlogTagControllerTest {
 
     @MockitoSpyBean
     private BlogTagMapper blogTagMapper;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -266,6 +270,8 @@ class BlogTagControllerTest {
 
     @Test
     void shouldCreateUpdateAndDeleteTag() throws Exception {
+        LoginSession session = loginAndGetSession("root", "123456");
+        jdbcTemplate.update("delete from sys_operation_log");
         String tagName = "Temp-" + UUID.randomUUID().toString().substring(0, 8);
         String createRequest = """
                 {
@@ -275,7 +281,7 @@ class BlogTagControllerTest {
                 """.formatted(tagName);
 
         JsonNode createdNode = performJson(post("/admin/tag")
-                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                .header("Authorization", "Bearer " + session.accessToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(createRequest));
 
@@ -291,7 +297,7 @@ class BlogTagControllerTest {
         updateRequest.setDescription("updated");
 
         performJson(put("/admin/tag/{id}", tagId)
-                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                .header("Authorization", "Bearer " + session.accessToken())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateRequest)));
 
@@ -301,11 +307,14 @@ class BlogTagControllerTest {
         assertThat(updated.getDescription()).isEqualTo("updated");
 
         mockMvc.perform(delete("/admin/tag/{id}", tagId)
-                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
+                        .header("Authorization", "Bearer " + session.accessToken()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200));
 
         assertThat(blogTagMapper.selectById(tagId)).isNull();
+        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "CREATE")).isEqualTo(1);
+        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "UPDATE")).isEqualTo(1);
+        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "DELETE")).isEqualTo(1);
     }
 
     @Test
@@ -366,6 +375,22 @@ class BlogTagControllerTest {
 
     private String loginAndGetAccessToken(String userName, String password) throws Exception {
         return loginAndGetSession(userName, password).accessToken();
+    }
+
+    private Integer countOperationLogs(long operatorUserId, String targetType, long targetId, String actionType) {
+        return jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where operator_user_id = ?
+                          and target_type = ?
+                          and target_id = ?
+                          and action_type = ?
+                          and action_result = 'SUCCESS'
+                        """,
+                Integer.class,
+                operatorUserId,
+                targetType,
+                targetId,
+                actionType);
     }
 
     private LoginSession loginAndGetSession(String userName, String password) throws Exception {

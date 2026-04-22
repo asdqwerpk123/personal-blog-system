@@ -7,6 +7,7 @@ import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.entity.BlogComment;
 import org.example.personalblogsystem.mapper.BlogCommentMapper;
 import org.example.personalblogsystem.service.IBlogCommentService;
+import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -19,9 +20,12 @@ import java.util.Locale;
 public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComment> implements IBlogCommentService {
 
     private final JdbcTemplate jdbcTemplate;
+    private final OperationLogRecordService operationLogRecordService;
 
-    public BlogCommentServiceImpl(JdbcTemplate jdbcTemplate) {
+    public BlogCommentServiceImpl(JdbcTemplate jdbcTemplate,
+                                  OperationLogRecordService operationLogRecordService) {
         this.jdbcTemplate = jdbcTemplate;
+        this.operationLogRecordService = operationLogRecordService;
     }
 
     @Override
@@ -57,7 +61,11 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
 
         existing.setCommentStatus(normalizeStatus(status));
         existing.setUpdateTime(LocalDateTime.now());
-        return updateById(existing) ? getById(id) : null;
+        if (!updateById(existing)) {
+            return null;
+        }
+        operationLogRecordService.recordSuccess("COMMENT", id, "STATUS", "Update comment status success");
+        return getById(id);
     }
 
     @Override

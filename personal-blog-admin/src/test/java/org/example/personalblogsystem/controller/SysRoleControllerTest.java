@@ -49,10 +49,19 @@ class SysRoleControllerTest {
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.length()").value(3))
-                .andExpect(jsonPath("$.data[0].roleRank").value(1))
-                .andExpect(jsonPath("$.data[1].roleRank").value(2))
-                .andExpect(jsonPath("$.data[2].roleRank").value(3));
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].roleCode").value("ADMIN"))
+                .andExpect(jsonPath("$.data[1].roleCode").value("USER"));
+    }
+
+    @Test
+    void shouldReturnOnlyAssignableUserRoleForAdmin() throws Exception {
+        mockMvc.perform(get("/admin/role/list")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("admin_zhang", "123456")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].roleCode").value("USER"));
     }
 
     @Test

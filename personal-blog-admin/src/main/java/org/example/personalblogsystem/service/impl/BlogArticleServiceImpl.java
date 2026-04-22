@@ -11,6 +11,7 @@ import org.example.personalblogsystem.mapper.BlogArticleMapper;
 import org.example.personalblogsystem.mapper.BlogCategoryMapper;
 import org.example.personalblogsystem.mapper.SysUserMapper;
 import org.example.personalblogsystem.service.IBlogArticleService;
+import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -33,13 +34,16 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     private final JdbcTemplate jdbcTemplate;
     private final SysUserMapper sysUserMapper;
     private final BlogCategoryMapper blogCategoryMapper;
+    private final OperationLogRecordService operationLogRecordService;
 
     public BlogArticleServiceImpl(JdbcTemplate jdbcTemplate,
                                   SysUserMapper sysUserMapper,
-                                  BlogCategoryMapper blogCategoryMapper) {
+                                  BlogCategoryMapper blogCategoryMapper,
+                                  OperationLogRecordService operationLogRecordService) {
         this.jdbcTemplate = jdbcTemplate;
         this.sysUserMapper = sysUserMapper;
         this.blogCategoryMapper = blogCategoryMapper;
+        this.operationLogRecordService = operationLogRecordService;
     }
 
     @Override
@@ -75,6 +79,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         } catch (DataAccessException exception) {
             throw translateDuplicateArticleSlugException(exception);
         }
+        operationLogRecordService.recordSuccess("ARTICLE", article.getId(), "CREATE", "Create article success: " + article.getArticleTitle());
         return getById(article.getId());
     }
 
@@ -101,7 +106,11 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         existing.setPublishedTime(preservedPublishedTime);
         existing.setUpdateTime(LocalDateTime.now());
         try {
-            return updateById(existing) ? getById(id) : null;
+            if (!updateById(existing)) {
+                return null;
+            }
+            operationLogRecordService.recordSuccess("ARTICLE", id, "UPDATE", "Update article success: " + existing.getArticleTitle());
+            return getById(id);
         } catch (DataAccessException exception) {
             throw translateDuplicateArticleSlugException(exception);
         }
@@ -116,7 +125,11 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
 
         existing.setArticleStatus(normalizeStatus(status, null));
         existing.setUpdateTime(LocalDateTime.now());
-        return updateById(existing) ? getById(id) : null;
+        if (!updateById(existing)) {
+            return null;
+        }
+        operationLogRecordService.recordSuccess("ARTICLE", id, "STATUS", "Update article status success: " + existing.getArticleTitle());
+        return getById(id);
     }
 
     @Override

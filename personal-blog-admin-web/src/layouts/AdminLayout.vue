@@ -44,7 +44,7 @@
           </button>
           <div class="profile">
             <span class="profile__avatar">{{ userInitial }}</span>
-            <span class="profile__name">{{ authStore.userName || '管理员' }}</span>
+            <span class="profile__name">{{ displayName }}</span>
             <el-icon><ArrowDown /></el-icon>
           </div>
         </div>
@@ -96,7 +96,8 @@ const iconMap = {
   User
 };
 
-const userInitial = computed(() => (authStore.userName || '管理员').slice(0, 1).toUpperCase());
+const displayName = computed(() => authStore.nickName || authStore.userName || '管理员');
+const userInitial = computed(() => displayName.value.slice(0, 1).toUpperCase());
 
 function handleLogout() {
   authStore.logout();

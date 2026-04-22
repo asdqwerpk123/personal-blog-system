@@ -3,6 +3,8 @@ package org.example.personalblogsystem.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.auth.AdminAuthPrincipal;
+import org.example.personalblogsystem.auth.JwtTokenService;
 import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogComment;
 import org.example.personalblogsystem.mapper.BlogCommentMapper;
@@ -40,6 +42,9 @@ class BlogCommentControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private JwtTokenService jwtTokenService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -186,17 +191,11 @@ class BlogCommentControllerTest {
     }
 
     @Test
-    void shouldDeleteCommentUsingAuthenticatedOperator() throws Exception {
+    void shouldRejectNormalUserCommentDeleteThroughAdminEndpoint() throws Exception {
         mockMvc.perform(delete("/admin/comment/{id}", 3L)
-                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456")))
+                        .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200));
-
-        Integer deleted = jdbcTemplate.queryForObject(
-                "select deleted from blog_comment where id = ?",
-                Integer.class,
-                3L);
-        assertThat(deleted).isEqualTo(1);
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     @Test
@@ -208,12 +207,11 @@ class BlogCommentControllerTest {
     }
 
     @Test
-    void shouldRejectDeletingOthersCommentWhenAuthenticatedOperatorIsNormalUser() throws Exception {
+    void shouldRejectNormalUserDeletingOthersCommentThroughAdminEndpoint() throws Exception {
         mockMvc.perform(delete("/admin/comment/{id}", 1L)
-                        .header("Authorization", "Bearer " + loginAndGetAccessToken("jerry", "123456")))
+                        .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("Normal user can only delete own comment."));
+                .andExpect(jsonPath("$.code").value(401));
     }
 
     private String loginAndGetAccessToken(String userName, String password) throws Exception {
@@ -234,6 +232,11 @@ class BlogCommentControllerTest {
         request.setUserName(userName);
         request.setPassword(password);
         return request;
+    }
+
+    private String issueNormalUserAccessToken() {
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(5L, "jerry", 3L, "USER");
+        return jwtTokenService.issueAccessToken(principal, jwtTokenService.calculateAccessTokenExpiresAt());
     }
 
     private JsonNode performJson(org.springframework.test.web.servlet.RequestBuilder requestBuilder) throws Exception {

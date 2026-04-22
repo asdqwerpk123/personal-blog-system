@@ -10,7 +10,8 @@
 2. MySQL 数据库设计与后端基础设施接入
 3. P0 核心管理接口与 OpenAPI 文档
 4. P1 标签、文章标签关联、评论管理
-5. P2 友情链接、操作日志分页、最小登录接口
+5. 后台用户新增、编辑、禁用/启用、重置密码与角色分配
+6. P2 友情链接、自动操作日志、真实仪表盘统计与最小登录接口
 
 项目适合作为 `Web 应用实训`、课程设计、Spring Boot 入门练习以及后续博客系统功能扩展的基础工程。
 
@@ -35,6 +36,10 @@ personal-blog-system
 │  ├─ src/main/resources
 │  ├─ src/test/java
 │  └─ pom.xml
+├─ personal-blog-admin-web
+│  ├─ src
+│  ├─ tests
+│  └─ package.json
 ├─ personal-blog-common
 │  ├─ src/main/java
 │  ├─ src/test/java
@@ -61,6 +66,14 @@ personal-blog-system
 - 数据源与多环境配置
 - MyBatis-Plus、Druid 集成
 - 控制器、持久层、测试代码
+
+#### `personal-blog-admin-web`
+
+后台管理前端模块，当前包含：
+
+- 登录页和后台布局
+- 用户、文章、分类、标签、评论、友情链接、操作日志、角色字典页面
+- 仪表盘真实统计接口联调
 
 #### `personal-blog-common`
 
@@ -99,6 +112,7 @@ personal-blog-system
 当前已经完成的后台接口包括：
 
 - 用户：`GET /admin/user/{id}`、`GET /admin/user/page`
+- 用户管理：`POST /admin/user`、`PUT /admin/user/{id}`、`PUT /admin/user/{id}/status`、`PUT /admin/user/{id}/password/reset`
 - 角色：`GET /admin/role/{id}`、`GET /admin/role/list`
 - 分类：`GET /admin/category/{id}`、`GET /admin/category/list`、`GET /admin/category/page`、`POST /admin/category`、`PUT /admin/category/{id}`、`DELETE /admin/category/{id}`
 - 文章：`GET /admin/article/{id}`、`GET /admin/article/page`、`POST /admin/article`、`PUT /admin/article/{id}`、`PUT /admin/article/{id}/status`、`DELETE /admin/article/{id}`
@@ -108,10 +122,14 @@ personal-blog-system
 - 友情链接：`GET /admin/friend-link/page`、`POST /admin/friend-link`、`PUT /admin/friend-link/{id}`、`DELETE /admin/friend-link/{id}`
 - 操作日志：`GET /admin/operation-log/page`
 - 登录：`POST /admin/auth/login`，返回脱敏用户信息与 Bearer `accessToken`
+- 仪表盘：`GET /admin/dashboard/summary`
 
 后台接口调用约定：
 
 - 除 `POST /admin/auth/login` 和 CORS `OPTIONS` 预检外，所有 `/admin/**` 接口都需要携带 `Authorization: Bearer <accessToken>`
+- 后台登录仅允许 `SUPER_ADMIN`、`ADMIN` 账号成功获取管理端 token
+- 后台管理接口仅允许 `SUPER_ADMIN`、`ADMIN` 访问；普通 `USER` 不进入 `/admin/**`
+- `SUPER_ADMIN` 可以管理 `ADMIN` 和 `USER`，`ADMIN` 只能管理 `USER`，不允许创建 `SUPER_ADMIN`
 - OpenAPI JSON 和 Swagger UI 已同步展示 Bearer JWT 鉴权信息，便于前后端联调
 
 ### 4. 文档与测试验证
@@ -120,6 +138,7 @@ personal-blog-system
 
 - 数据库连接测试
 - `Mapper` / `Service` / `Controller` 主要用例测试
+- 管理端前端单元测试与生产构建
 - OpenAPI 运行时文档：`/v3/api-docs`
 - Swagger UI：`/swagger-ui/index.html`
 - 整仓 `.\scripts\test-with-test-db.ps1`
@@ -337,7 +356,7 @@ SQL 文件中包含多个触发器和存储过程，主要作用有：
 - OpenAPI / Swagger 文档
 - 用户、角色、分类、文章后台接口
 - 标签、文章标签、评论后台接口
-- 友情链接、操作日志分页、最小登录接口
+- 友情链接、操作日志分页、自动操作日志、仪表盘统计、最小登录接口
 - 数据库连接与 CRUD / 接口测试
 
 ## Druid 监控页
@@ -375,8 +394,9 @@ password: admin123
 
 - P0 重点解决项目启动、统一返回、分页与 OpenAPI 文档
 - P1 补齐标签、文章标签关联、评论管理
-- P2 补齐友情链接、操作日志分页、登录接口
+- P2 补齐友情链接、操作日志自动记录、真实仪表盘、登录接口
 - 当前管理端已经补齐 Bearer JWT 登录、`/admin/**` 默认鉴权和服务端身份绑定
+- 当前后台前端已经联调用户、文章、分类、标签、评论、友情链接、操作日志、角色字典和仪表盘页面
 
 ## 后续开发建议
 
@@ -385,9 +405,8 @@ password: admin123
 - 更细粒度的角色权限控制、refresh token 与 logout 机制
 - 前台博客站点接口
 - 更完整的参数校验与请求 DTO
-- 操作日志的更多查询维度
 - 友情链接审核流与展示页联调
-- Vue 前端联调
+- 公开注册、验证码、邮箱校验、密码找回等前台账号能力
 
 ## 作者说明
 

@@ -8,6 +8,7 @@ import org.example.personalblogsystem.mapper.BlogArticleMapper;
 import org.example.personalblogsystem.mapper.BlogArticleTagMapper;
 import org.example.personalblogsystem.mapper.BlogTagMapper;
 import org.example.personalblogsystem.service.IBlogArticleTagService;
+import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,11 +26,14 @@ public class BlogArticleTagServiceImpl extends ServiceImpl<BlogArticleTagMapper,
 
     private final BlogArticleMapper blogArticleMapper;
     private final BlogTagMapper blogTagMapper;
+    private final OperationLogRecordService operationLogRecordService;
 
     public BlogArticleTagServiceImpl(BlogArticleMapper blogArticleMapper,
-                                     BlogTagMapper blogTagMapper) {
+                                     BlogTagMapper blogTagMapper,
+                                     OperationLogRecordService operationLogRecordService) {
         this.blogArticleMapper = blogArticleMapper;
         this.blogTagMapper = blogTagMapper;
+        this.operationLogRecordService = operationLogRecordService;
     }
 
     @Override
@@ -74,7 +78,9 @@ public class BlogArticleTagServiceImpl extends ServiceImpl<BlogArticleTagMapper,
             }
         }
 
-        return listTagsByArticleId(articleId);
+        List<BlogTag> tags = listTagsByArticleId(articleId);
+        operationLogRecordService.recordSuccess("ARTICLE", articleId, "UPDATE_TAGS", "Update article tags success");
+        return tags;
     }
 
     private void validateArticleExists(Long articleId) {
