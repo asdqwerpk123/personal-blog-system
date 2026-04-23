@@ -682,5 +682,5 @@ git commit -m "test: finalize stability bugfix regression coverage"
 ## Self-Review Checklist
 
 - Spec coverage: atomic tag replacement, duplicate-key translation, and locale-safe status normalization all have explicit tasks and tests.
-- Placeholder scan: no `TODO`, `TBD`, or “similar to above” instructions remain.
+- Placeholder scan: no unfinished placeholder instructions remain.
 - Type consistency: uses the current repo types and paths (`BlogArticleTagServiceImpl`, `BlogTagServiceImpl`, `BlogArticleServiceImpl`, existing controller test classes, and `Result` error flow).

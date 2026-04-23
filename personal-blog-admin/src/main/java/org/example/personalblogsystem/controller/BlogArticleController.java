@@ -1,5 +1,6 @@
 package org.example.personalblogsystem.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.personalblogcommon.result.Result;
 import org.example.personalblogcommon.result.ResultCodeEnum;
@@ -7,9 +8,11 @@ import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
 import org.example.personalblogsystem.dto.BlogArticleCreateRequest;
 import org.example.personalblogsystem.dto.BlogArticleUpdateRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
+import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.entity.BlogTag;
-import org.example.personalblogsystem.service.IBlogArticleTagService;
 import org.example.personalblogsystem.service.IBlogArticleService;
+import org.example.personalblogsystem.service.IBlogArticleTagService;
+import org.example.personalblogsystem.service.IBlogCategoryService;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,26 +20,33 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/admin/article")
 public class BlogArticleController {
 
+    private static final long DEFAULT_CURRENT = 1L;
+    private static final long DEFAULT_SIZE = 10L;
     private static final long MAX_PAGE_SIZE = 100L;
+    private static final Set<String> ARTICLE_STATUSES = Set.of("DRAFT", "PUBLISHED", "PRIVATE");
 
     private final IBlogArticleService blogArticleService;
     private final IBlogArticleTagService blogArticleTagService;
+    private final IBlogCategoryService blogCategoryService;
 
     public BlogArticleController(IBlogArticleService blogArticleService,
-                                 IBlogArticleTagService blogArticleTagService) {
+                                 IBlogArticleTagService blogArticleTagService,
+                                 IBlogCategoryService blogCategoryService) {
         this.blogArticleService = blogArticleService;
         this.blogArticleTagService = blogArticleTagService;
+        this.blogCategoryService = blogCategoryService;
     }
 
     @GetMapping("/{id}")
@@ -46,11 +56,39 @@ public class BlogArticleController {
     }
 
     @GetMapping("/page")
-    public Result<Page<BlogArticle>> page(@RequestParam long current,
-                                          @RequestParam long size,
-                                          @RequestParam(required = false) String keyword) {
-        validatePageRequest(current, size);
-        return Result.ok(blogArticleService.pageArticles(current, size, keyword));
+    public Result<Page<BlogArticle>> page(@RequestParam(required = false) Long current,
+                                          @RequestParam(required = false) Long size,
+                                          @RequestParam(required = false) Long page,
+                                          @RequestParam(required = false) Long pageSize,
+                                          @RequestParam(required = false) String keyword,
+                                          @RequestParam(required = false) String title,
+                                          @RequestParam(required = false) Long categoryId,
+                                          @RequestParam(required = false) String categoryName,
+                                          @RequestParam(required = false) String status) {
+        long resolvedCurrent = resolveCurrent(current, page);
+        long resolvedSize = resolveSize(size, pageSize);
+        validatePageRequest(resolvedCurrent, resolvedSize);
+
+        if (!hasArticleListFilters(title, categoryId, categoryName, status)) {
+            return Result.ok(blogArticleService.pageArticles(resolvedCurrent, resolvedSize, keyword));
+        }
+
+        String articleStatus = normalizeStatus(status);
+        if (StringUtils.hasText(status) && !ARTICLE_STATUSES.contains(articleStatus)) {
+            return Result.fail(ResultCodeEnum.PARAM_ERROR);
+        }
+
+        LambdaQueryWrapper<BlogArticle> queryWrapper = new LambdaQueryWrapper<>();
+        applyArticleSearch(queryWrapper, keyword, title);
+        applyCategoryFilter(queryWrapper, categoryId, categoryName);
+        if (StringUtils.hasText(articleStatus)) {
+            queryWrapper.eq(BlogArticle::getArticleStatus, articleStatus);
+        }
+        queryWrapper.orderByDesc(BlogArticle::getPublishedTime, BlogArticle::getUpdateTime, BlogArticle::getId);
+
+        Page<BlogArticle> articlePage = new Page<>(resolvedCurrent, resolvedSize);
+        blogArticleService.page(articlePage, queryWrapper);
+        return Result.ok(articlePage);
     }
 
     @GetMapping("/{id}/tags")
@@ -82,14 +120,65 @@ public class BlogArticleController {
 
     @PutMapping("/{id}/status")
     public Result<BlogArticle> updateStatus(@PathVariable Long id, @RequestParam String status) {
-        validateStatus(status);
-        BlogArticle updatedArticle = blogArticleService.updateArticleStatus(id, status);
+        String normalizedStatus = normalizeStatus(status);
+        validateStatus(normalizedStatus);
+        BlogArticle updatedArticle = blogArticleService.updateArticleStatus(id, normalizedStatus);
         return updatedArticle == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedArticle);
     }
 
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         return blogArticleService.deleteArticle(id) ? Result.ok(null) : Result.fail(ResultCodeEnum.NOT_FOUND);
+    }
+
+    private long resolveCurrent(Long current, Long page) {
+        return current != null ? current : page == null ? DEFAULT_CURRENT : page;
+    }
+
+    private long resolveSize(Long size, Long pageSize) {
+        return size != null ? size : pageSize == null ? DEFAULT_SIZE : pageSize;
+    }
+
+    private boolean hasArticleListFilters(String title, Long categoryId, String categoryName, String status) {
+        return StringUtils.hasText(title)
+                || categoryId != null
+                || StringUtils.hasText(categoryName)
+                || StringUtils.hasText(status);
+    }
+
+    private void applyArticleSearch(LambdaQueryWrapper<BlogArticle> queryWrapper, String keyword, String title) {
+        if (StringUtils.hasText(title)) {
+            queryWrapper.like(BlogArticle::getArticleTitle, title.trim());
+            return;
+        }
+
+        if (StringUtils.hasText(keyword)) {
+            queryWrapper.and(wrapper -> wrapper.like(BlogArticle::getArticleTitle, keyword.trim())
+                    .or()
+                    .like(BlogArticle::getArticleSummary, keyword.trim()));
+        }
+    }
+
+    private void applyCategoryFilter(LambdaQueryWrapper<BlogArticle> queryWrapper,
+                                     Long categoryId,
+                                     String categoryName) {
+        if (categoryId != null) {
+            queryWrapper.eq(BlogArticle::getCategoryId, categoryId);
+            return;
+        }
+
+        if (StringUtils.hasText(categoryName)) {
+            List<Long> categoryIds = blogCategoryService.list(new LambdaQueryWrapper<BlogCategory>()
+                            .like(BlogCategory::getCategoryName, categoryName.trim()))
+                    .stream()
+                    .map(BlogCategory::getId)
+                    .toList();
+            if (categoryIds.isEmpty()) {
+                queryWrapper.eq(BlogArticle::getId, -1L);
+            } else {
+                queryWrapper.in(BlogArticle::getCategoryId, categoryIds);
+            }
+        }
     }
 
     private void validatePageRequest(long current, long size) {
@@ -184,13 +273,17 @@ public class BlogArticleController {
         article.setAllowComment(allowComment);
     }
 
-    private void validateStatus(String status) {
+    private String normalizeStatus(String status) {
         if (!StringUtils.hasText(status)) {
-            throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
+            return "";
         }
 
         String normalized = status.trim().toUpperCase(Locale.ROOT);
-        if (!"DRAFT".equals(normalized) && !"PUBLISHED".equals(normalized) && !"PRIVATE".equals(normalized)) {
+        return "OFFLINE".equals(normalized) ? "PRIVATE" : normalized;
+    }
+
+    private void validateStatus(String status) {
+        if (!ARTICLE_STATUSES.contains(status)) {
             throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
         }
     }

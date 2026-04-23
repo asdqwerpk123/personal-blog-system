@@ -110,7 +110,7 @@ function Get-LinkTarget {
     return $target
 }
 
-$markdownFiles = Get-MarkdownFilesToCheck
+$markdownFiles = @(Get-MarkdownFilesToCheck)
 $errors = [System.Collections.Generic.List[string]]::new()
 $anchorCache = @{}
 $linkPattern = [regex]'!\[[^\]]*\]\((?<target>[^)]+)\)|\[[^\]]+\]\((?<target>[^)]+)\)'

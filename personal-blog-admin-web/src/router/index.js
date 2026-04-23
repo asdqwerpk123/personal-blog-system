@@ -2,8 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { useAuthStore } from '@/stores/auth.js';
-import ArticleManagementView from '@/views/admin/ArticleManagementView.vue';
-import CategoryManagementView from '@/views/admin/CategoryManagementView.vue';
+import ArticlesView from '@/views/ArticlesView.vue';
+import CategoriesView from '@/views/CategoriesView.vue';
 import CommentModerationView from '@/views/admin/CommentModerationView.vue';
 import FriendLinkManagementView from '@/views/admin/FriendLinkManagementView.vue';
 import OperationLogView from '@/views/admin/OperationLogView.vue';
@@ -16,8 +16,8 @@ import PlaceholderView from '@/views/PlaceholderView.vue';
 import { adminMenuRoutes } from './adminMenu.js';
 
 const adminRouteComponents = {
-  articles: ArticleManagementView,
-  categories: CategoryManagementView,
+  articles: ArticlesView,
+  categories: CategoriesView,
   comments: CommentModerationView,
   dashboard: DashboardView,
   friendLinks: FriendLinkManagementView,

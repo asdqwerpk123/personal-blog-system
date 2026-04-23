@@ -13,8 +13,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -23,6 +23,8 @@ import java.util.List;
 @RequestMapping("/admin/category")
 public class BlogCategoryController {
 
+    private static final long DEFAULT_CURRENT = 1L;
+    private static final long DEFAULT_SIZE = 10L;
     private static final long MAX_PAGE_SIZE = 100L;
 
     private final IBlogCategoryService blogCategoryService;
@@ -43,11 +45,17 @@ public class BlogCategoryController {
     }
 
     @GetMapping("/page")
-    public Result<Page<BlogCategory>> page(@RequestParam long current,
-                                           @RequestParam long size,
-                                           @RequestParam(required = false) String keyword) {
-        validatePageRequest(current, size);
-        return Result.ok(blogCategoryService.pageCategories(current, size, keyword));
+    public Result<Page<BlogCategory>> page(@RequestParam(required = false) Long current,
+                                           @RequestParam(required = false) Long size,
+                                           @RequestParam(required = false) Long page,
+                                           @RequestParam(required = false) Long pageSize,
+                                           @RequestParam(required = false) String keyword,
+                                           @RequestParam(required = false) String categoryName) {
+        long resolvedCurrent = current != null ? current : page == null ? DEFAULT_CURRENT : page;
+        long resolvedSize = size != null ? size : pageSize == null ? DEFAULT_SIZE : pageSize;
+        validatePageRequest(resolvedCurrent, resolvedSize);
+        String searchKeyword = StringUtils.hasText(keyword) ? keyword : categoryName;
+        return Result.ok(blogCategoryService.pageCategories(resolvedCurrent, resolvedSize, searchKeyword));
     }
 
     @PostMapping
