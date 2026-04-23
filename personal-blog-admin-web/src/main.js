@@ -1,12 +1,19 @@
 import {
   ElButton,
   ElCheckbox,
+  ElDialog,
   ElForm,
   ElFormItem,
   ElIcon,
   ElInput,
+  ElInputNumber,
+  ElLoading,
   ElMenu,
   ElMenuItem,
+  ElOption,
+  ElPagination,
+  ElSelect,
+  ElTooltip,
   ElTable,
   ElTableColumn
 } from 'element-plus';
@@ -26,12 +33,19 @@ app.use(router);
 [
   ElButton,
   ElCheckbox,
+  ElDialog,
   ElForm,
   ElFormItem,
   ElIcon,
   ElInput,
+  ElInputNumber,
+  ElLoading,
   ElMenu,
   ElMenuItem,
+  ElOption,
+  ElPagination,
+  ElSelect,
+  ElTooltip,
   ElTable,
   ElTableColumn
 ].forEach((component) => app.use(component, { locale: zhCn }));

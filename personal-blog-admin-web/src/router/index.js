@@ -2,12 +2,16 @@ import { createRouter, createWebHistory } from 'vue-router';
 
 import AdminLayout from '@/layouts/AdminLayout.vue';
 import { useAuthStore } from '@/stores/auth.js';
+import ArticlesView from '@/views/ArticlesView.vue';
+import CategoriesView from '@/views/CategoriesView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import LoginView from '@/views/LoginView.vue';
 import PlaceholderView from '@/views/PlaceholderView.vue';
 import { adminMenuRoutes } from './adminMenu.js';
 
 const adminRouteComponents = {
+  articles: ArticlesView,
+  categories: CategoriesView,
   dashboard: DashboardView
 };
 
