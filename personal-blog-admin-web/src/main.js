@@ -1,22 +1,7 @@
 import {
-  ElButton,
-  ElCheckbox,
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElIcon,
-  ElInput,
-  ElInputNumber,
-  ElLoading,
-  ElMenu,
-  ElMenuItem,
-  ElOption,
-  ElPagination,
-  ElSelect,
-  ElTooltip,
-  ElTable,
-  ElTableColumn
+  ElConfigProvider
 } from 'element-plus';
+import ElementPlus from 'element-plus';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
@@ -30,24 +15,7 @@ const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
-[
-  ElButton,
-  ElCheckbox,
-  ElDialog,
-  ElForm,
-  ElFormItem,
-  ElIcon,
-  ElInput,
-  ElInputNumber,
-  ElLoading,
-  ElMenu,
-  ElMenuItem,
-  ElOption,
-  ElPagination,
-  ElSelect,
-  ElTooltip,
-  ElTable,
-  ElTableColumn
-].forEach((component) => app.use(component, { locale: zhCn }));
+app.use(ElementPlus, { locale: zhCn });
+app.use(ElConfigProvider);
 
 app.mount('#app');

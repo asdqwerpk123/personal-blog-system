@@ -1,9 +1,9 @@
 spring:
   datasource:
     druid:
-      url: ${BLOG_DB_TEST_URL:${BLOG_DB_URL:jdbc:mysql://localhost:3306/personal_blog_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}}
-      username: ${BLOG_DB_TEST_USERNAME:${BLOG_DB_USERNAME:root}}
-      password: ${BLOG_DB_TEST_PASSWORD:${BLOG_DB_PASSWORD:123456}}
+      url: ${BLOG_DB_TEST_URL}
+      username: ${BLOG_DB_TEST_USERNAME}
+      password: ${BLOG_DB_TEST_PASSWORD}
       driver-class-name: com.mysql.cj.jdbc.Driver
       initial-size: 1
       min-idle: 1
@@ -18,3 +18,9 @@ mybatis-plus:
   mapper-locations: classpath:/mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
+blog:
+  auth:
+    allowed-origins: ${BLOG_ADMIN_ALLOWED_ORIGINS:http://localhost:5173}
+    jwt:
+      secret: ${BLOG_ADMIN_JWT_SECRET:change-me-for-real-use-please-32-bytes}
+      access-token-expire-minutes: ${BLOG_ADMIN_JWT_ACCESS_TOKEN_EXPIRE_MINUTES:120}

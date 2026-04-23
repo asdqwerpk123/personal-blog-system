@@ -15,6 +15,11 @@ export const useAuthStore = defineStore('auth', {
     return {
       token: stored.token,
       userName: stored.userName,
+      userId: stored.userId,
+      nickName: stored.nickName,
+      roleId: stored.roleId,
+      roleCode: stored.roleCode,
+      roleName: stored.roleName,
       remember: stored.remember
     };
   },
@@ -26,6 +31,11 @@ export const useAuthStore = defineStore('auth', {
       const stored = getStoredAuth();
       this.token = stored.token;
       this.userName = stored.userName;
+      this.userId = stored.userId;
+      this.nickName = stored.nickName;
+      this.roleId = stored.roleId;
+      this.roleCode = stored.roleCode;
+      this.roleName = stored.roleName;
       this.remember = stored.remember;
     },
     async login({ userName, password, remember }) {
@@ -37,14 +47,33 @@ export const useAuthStore = defineStore('auth', {
       }
 
       this.token = token;
-      this.userName = userName;
+      this.userName = response?.data?.userName || userName;
+      this.userId = response?.data?.id ? String(response.data.id) : '';
+      this.nickName = response?.data?.nickName || '';
+      this.roleId = response?.data?.roleId ? String(response.data.roleId) : '';
+      this.roleCode = response?.data?.roleCode || '';
+      this.roleName = response?.data?.roleName || '';
       this.remember = remember;
-      persistAuth({ token, userName, remember });
+      persistAuth({
+        token,
+        userName: this.userName,
+        userId: this.userId,
+        nickName: this.nickName,
+        roleId: this.roleId,
+        roleCode: this.roleCode,
+        roleName: this.roleName,
+        remember
+      });
     },
     logout() {
       clearStoredAuth();
       this.token = '';
       this.userName = '';
+      this.userId = '';
+      this.nickName = '';
+      this.roleId = '';
+      this.roleCode = '';
+      this.roleName = '';
     }
   }
 });

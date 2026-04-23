@@ -13,8 +13,8 @@ spring:
       stat-view-servlet:
         enabled: true
         url-pattern: /druid/*
-        login-username: admin
-        login-password: admin123
+        login-username: ${BLOG_DRUID_MONITOR_USERNAME:admin}
+        login-password: ${BLOG_DRUID_MONITOR_PASSWORD:admin123}
       web-stat-filter:
         enabled: true
         url-pattern: /*
@@ -24,3 +24,9 @@ mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+blog:
+  auth:
+    allowed-origins: ${BLOG_ADMIN_ALLOWED_ORIGINS:http://localhost:5173}
+    jwt:
+      secret: ${BLOG_ADMIN_JWT_SECRET:change-me-for-real-use-please-32-bytes}
+      access-token-expire-minutes: ${BLOG_ADMIN_JWT_ACCESS_TOKEN_EXPIRE_MINUTES:120}

@@ -4,6 +4,12 @@ import AdminLayout from '@/layouts/AdminLayout.vue';
 import { useAuthStore } from '@/stores/auth.js';
 import ArticlesView from '@/views/ArticlesView.vue';
 import CategoriesView from '@/views/CategoriesView.vue';
+import CommentModerationView from '@/views/admin/CommentModerationView.vue';
+import FriendLinkManagementView from '@/views/admin/FriendLinkManagementView.vue';
+import OperationLogView from '@/views/admin/OperationLogView.vue';
+import RoleDictionaryView from '@/views/admin/RoleDictionaryView.vue';
+import TagManagementView from '@/views/admin/TagManagementView.vue';
+import UserManagementView from '@/views/admin/UserManagementView.vue';
 import DashboardView from '@/views/DashboardView.vue';
 import LoginView from '@/views/LoginView.vue';
 import PlaceholderView from '@/views/PlaceholderView.vue';
@@ -12,7 +18,13 @@ import { adminMenuRoutes } from './adminMenu.js';
 const adminRouteComponents = {
   articles: ArticlesView,
   categories: CategoriesView,
-  dashboard: DashboardView
+  comments: CommentModerationView,
+  dashboard: DashboardView,
+  friendLinks: FriendLinkManagementView,
+  logs: OperationLogView,
+  roles: RoleDictionaryView,
+  tags: TagManagementView,
+  users: UserManagementView
 };
 
 const router = createRouter({

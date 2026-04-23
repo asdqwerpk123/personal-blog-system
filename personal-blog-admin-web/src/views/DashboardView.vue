@@ -2,7 +2,7 @@
   <div class="dashboard-page">
     <div class="page-heading">
       <h1>仪表盘</h1>
-      <span>最后更新: 今天 09:15</span>
+      <span>最后更新: {{ lastUpdatedLabel }}</span>
     </div>
 
     <section class="stats-grid" aria-label="数据概览">
@@ -106,8 +106,10 @@
 
 <script setup>
 import { ChatLineSquare, Clock, Connection, Document, EditPen, View } from '@element-plus/icons-vue';
+import { computed, onMounted, ref } from 'vue';
 
-import { dashboardStats, latestArticles, latestComments, operationLogs } from '@/mock/dashboard.js';
+import { getDashboardSummary } from '@/api/dashboard.js';
+import { unwrapData } from '@/views/admin/pageData.js';
 
 const statIconMap = {
   ChatLineSquare,
@@ -115,4 +117,121 @@ const statIconMap = {
   Connection,
   Document
 };
+
+const summary = ref({
+  articleCount: 0,
+  categoryCount: 0,
+  tagCount: 0,
+  commentCount: 0,
+  pendingCommentCount: 0,
+  friendLinkCount: 0,
+  latestArticles: [],
+  latestComments: [],
+  latestLogs: []
+});
+const lastUpdatedAt = ref(null);
+
+const dashboardStats = computed(() => [
+  {
+    label: '文章总数',
+    value: Number(summary.value.articleCount || 0).toLocaleString(),
+    icon: 'Document',
+    tone: 'blue'
+  },
+  {
+    label: '分类/标签',
+    value: `${Number(summary.value.categoryCount || 0)} / ${Number(summary.value.tagCount || 0)}`,
+    icon: 'Connection',
+    tone: 'green'
+  },
+  {
+    label: '评论总数',
+    value: Number(summary.value.commentCount || 0).toLocaleString(),
+    icon: 'ChatLineSquare',
+    tone: 'orange'
+  },
+  {
+    label: '待审核',
+    value: Number(summary.value.pendingCommentCount || 0).toLocaleString(),
+    icon: 'Clock',
+    tone: 'red'
+  }
+]);
+
+const latestArticles = computed(() => (summary.value.latestArticles || []).map((article) => ({
+  title: article.articleTitle || article.title || '-',
+  date: formatTime(article.updateTime || article.createTime || article.publishedTime),
+  category: article.categoryName || (article.categoryId ? `分类 ${article.categoryId}` : '-'),
+  views: article.viewCount ?? 0,
+  status: articleStatusLabel(article.articleStatus || article.status)
+})));
+
+const latestComments = computed(() => (summary.value.latestComments || []).map((comment) => {
+  const author = comment.nickName || comment.userName || (comment.userId ? `用户 ${comment.userId}` : '访客');
+
+  return {
+    author,
+    avatar: author.slice(0, 1).toUpperCase(),
+    time: formatTime(comment.updateTime || comment.createTime),
+    content: comment.commentContent || comment.content || '-',
+    article: comment.articleTitle || (comment.articleId ? `文章 ${comment.articleId}` : '-'),
+    status: commentStatusLabel(comment.commentStatus || comment.status)
+  };
+}));
+
+const operationLogs = computed(() => (summary.value.latestLogs || []).map((log) => ({
+  user: log.operatorUserName || (log.operatorUserId ? `用户 ${log.operatorUserId}` : '系统'),
+  action: log.actionDetail || `${log.actionType || '-'} ${log.targetType || ''}`.trim(),
+  time: formatTime(log.createTime || log.updateTime),
+  ip: log.targetType || '-',
+  state: log.actionResult === 'FAILED' ? 'danger' : 'success'
+})));
+
+const lastUpdatedLabel = computed(() => {
+  if (!lastUpdatedAt.value) {
+    return '加载中';
+  }
+
+  return formatTime(lastUpdatedAt.value);
+});
+
+onMounted(async () => {
+  const response = await getDashboardSummary();
+  summary.value = {
+    ...summary.value,
+    ...unwrapData(response)
+  };
+  lastUpdatedAt.value = new Date().toISOString();
+});
+
+function articleStatusLabel(status) {
+  const value = String(status || '').toUpperCase();
+  const labels = {
+    DRAFT: '草稿',
+    PRIVATE: '私密',
+    PUBLISHED: '已发布'
+  };
+
+  return labels[value] || status || '-';
+}
+
+function commentStatusLabel(status) {
+  const value = String(status || '').toUpperCase();
+  const labels = {
+    APPROVED: '已通过',
+    PENDING: '待审核',
+    REJECTED: '已驳回'
+  };
+
+  return labels[value] || status || '';
+}
+
+function formatTime(value) {
+  if (!value) {
+    return '-';
+  }
+
+  const normalized = String(value).replace('T', ' ');
+  return normalized.length >= 16 ? normalized.slice(0, 16) : normalized;
+}
 </script>

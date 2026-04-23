@@ -1,4 +1,10 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+vi.mock('element-plus', () => ({
+  ElMessage: {
+    error: vi.fn()
+  }
+}));
 
 import http from '../src/api/http.js';
 import { getStoredAuth, persistAuth } from '../src/utils/authStorage.js';
@@ -60,5 +66,32 @@ describe('http client authorization', () => {
       });
 
     expect(getStoredAuth().token).toBe('existing-token');
+  });
+
+  it('clears stored auth when wrapped admin responses are unauthorized', async () => {
+    window.history.pushState({}, '', '/login');
+    persistAuth({
+      token: 'expired-token',
+      userName: 'admin',
+      remember: true
+    });
+
+    const adapter = (config) => Promise.resolve({
+      config,
+      data: {
+        code: 401,
+        message: '未授权'
+      },
+      headers: {},
+      request: {},
+      status: 200,
+      statusText: 'OK'
+    });
+
+    await expect(http.get('/admin/article/1', { adapter }))
+      .rejects
+      .toThrow('未授权');
+
+    expect(getStoredAuth().token).toBe('');
   });
 });
