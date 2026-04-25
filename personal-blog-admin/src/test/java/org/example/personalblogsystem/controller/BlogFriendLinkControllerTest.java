@@ -14,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -21,6 +22,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.LinkedHashMap;
 import java.util.Locale;
@@ -33,6 +36,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -309,6 +313,70 @@ class BlogFriendLinkControllerTest {
     }
 
     @Test
+    void shouldUpdateFriendLinkStatusAndRecordOperationLog() throws Exception {
+        String accessToken = loginAndGetAccessToken("root", "123456");
+        long friendLinkId = createFriendLink(accessToken, "Status Link", randomUrl());
+
+        mockMvc.perform(put("/admin/friend-link/{id}/status", friendLinkId)
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("status", "REJECTED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.linkStatus").value("REJECTED"));
+
+        Integer logCount = jdbcTemplate.queryForObject(
+                "select count(*) from sys_operation_log where target_type = 'FRIEND_LINK' " +
+                        "and target_id = ? and action_type = 'CHANGE_FRIEND_LINK_STATUS' and action_result = 'SUCCESS'",
+                Integer.class,
+                friendLinkId);
+        assertThat(logCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldUploadFriendLinkLogoAndRecordOperationLog() throws Exception {
+        String accessToken = loginAndGetAccessToken("root", "123456");
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "logo.png",
+                "image/png",
+                new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+
+        JsonNode response = performJson(multipart("/admin/files/friend-link-logo")
+                .file(file)
+                .header("Authorization", "Bearer " + accessToken));
+
+        assertThat(response.path("code").asInt()).isEqualTo(200);
+        String url = response.path("data").path("url").asText();
+        assertThat(url).startsWith("/uploads/friend-links/");
+        assertThat(url).endsWith(".png");
+        Path storedFile = Path.of(url.substring(1));
+        assertThat(Files.exists(storedFile)).isTrue();
+        Files.deleteIfExists(storedFile);
+
+        Integer logCount = jdbcTemplate.queryForObject(
+             "select count(*) from sys_operation_log where target_type = 'FRIEND_LINK_LOGO' " +
+                     "and action_type = 'UPLOAD_FRIEND_LINK_LOGO' and action_result = 'SUCCESS'",
+                Integer.class);
+        assertThat(logCount).isEqualTo(1);
+    }
+
+    @Test
+    void shouldRejectUnsupportedFriendLinkLogoTypeWithChineseMessage() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "logo.txt",
+                "text/plain",
+                "not image".getBytes());
+
+        mockMvc.perform(multipart("/admin/files/friend-link-logo")
+                        .file(file)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("不支持的图片格式"));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenUpdatingMissingFriendLink() throws Exception {
         mockMvc.perform(put("/admin/friend-link/{id}", 999L)
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
@@ -350,6 +418,20 @@ class BlogFriendLinkControllerTest {
 
     private String randomUrl() {
         return "https://example.org/" + UUID.randomUUID();
+    }
+
+    private long createFriendLink(String accessToken, String siteName, String siteUrl) throws Exception {
+        JsonNode createdNode = performJson(post("/admin/friend-link")
+                .header("Authorization", "Bearer " + accessToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(friendLinkRequest(siteName,
+                        siteUrl,
+                        null,
+                        null,
+                        null))));
+        long friendLinkId = createdNode.path("data").path("id").asLong();
+        assertThat(friendLinkId).isPositive();
+        return friendLinkId;
     }
 
     private JsonNode performJson(org.springframework.test.web.servlet.RequestBuilder requestBuilder) throws Exception {

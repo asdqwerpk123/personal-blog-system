@@ -45,7 +45,7 @@ class SysOperationLogControllerTest {
 
     @Test
     void shouldReturnPagedOperationLogs() throws Exception {
-        mockMvc.perform(get("/admin/operation-log/page")
+        mockMvc.perform(get("/admin/log/page")
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
                         .param("size", "10"))
@@ -54,7 +54,7 @@ class SysOperationLogControllerTest {
                 .andExpect(jsonPath("$.data.current").value(1))
                 .andExpect(jsonPath("$.data.records.length()").value(4))
                 .andExpect(jsonPath("$.data.records[0].targetType").value("AUTH"))
-                .andExpect(jsonPath("$.data.records[0].actionType").value("LOGIN"))
+                .andExpect(jsonPath("$.data.records[0].actionType").value("LOGIN_SUCCESS"))
                 .andExpect(jsonPath("$.data.records[0].actionResult").value("SUCCESS"));
     }
 
@@ -121,7 +121,7 @@ class SysOperationLogControllerTest {
                         .param("actionResult", "ARCHIVED"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("actionResult must be one of SUCCESS, FAILED"));
+                .andExpect(jsonPath("$.message").value("actionResult must be one of SUCCESS, FAILURE"));
     }
 
     @Test
@@ -133,16 +133,16 @@ class SysOperationLogControllerTest {
                         .param("actionResult", "   "))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("actionResult must be one of SUCCESS, FAILED"));
+                .andExpect(jsonPath("$.message").value("actionResult must be one of SUCCESS, FAILURE"));
     }
 
     private void seedOperationLogs() {
         jdbcTemplate.update("delete from sys_operation_log");
 
         LocalDateTime baseTime = LocalDateTime.of(2026, 4, 14, 12, 0);
-        insertOperationLog(1L, "ARTICLE", 101L, "CREATE", "SUCCESS", "Create article success", baseTime.minusMinutes(2));
-        insertOperationLog(2L, "COMMENT", 202L, "UPDATE", "FAILED", "Update comment failed", baseTime.minusMinutes(1));
-        insertOperationLog(1L, "TAG", 303L, "DELETE", "SUCCESS", "Delete tag success", baseTime);
+        insertOperationLog(1L, "ARTICLE", 101L, "CREATE_ARTICLE", "SUCCESS", "新增文章成功", baseTime.minusMinutes(2));
+        insertOperationLog(2L, "COMMENT", 202L, "REVIEW_COMMENT", "FAILURE", "评论审核失败", baseTime.minusMinutes(1));
+        insertOperationLog(1L, "TAG", 303L, "DELETE_TAG", "SUCCESS", "删除标签成功", baseTime);
     }
 
     private void insertOperationLog(Long operatorUserId,

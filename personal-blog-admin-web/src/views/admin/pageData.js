@@ -34,7 +34,7 @@ export function statusType(status) {
     return 'success';
   }
 
-  if (['DISABLED', 'REJECTED', 'FAILED', 'DELETED'].includes(value)) {
+  if (['DISABLED', 'REJECTED', 'FAILED', 'FAILURE', 'DELETED'].includes(value)) {
     return 'danger';
   }
 

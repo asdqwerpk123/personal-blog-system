@@ -21,12 +21,13 @@ const columns = [
   { label: '操作者', prop: 'operatorUserName', keys: ['operatorUserName', 'operatorName', 'userName', 'operatorUserId'], minWidth: 130 },
   { label: '对象类型', prop: 'targetType', minWidth: 120 },
   { label: '动作', prop: 'actionName', keys: ['actionName', 'actionType', 'operation'], minWidth: 150 },
+  { label: '详情', prop: 'actionDetail', keys: ['actionDetail', 'detail'], minWidth: 220 },
   { label: '结果', prop: 'actionResult', type: 'status', minWidth: 100 },
   { label: '时间', prop: 'createTime', keys: ['createTime', 'operationTime'], minWidth: 170 }
 ];
 
 const resultOptions = [
   { label: '成功', value: 'SUCCESS' },
-  { label: '失败', value: 'FAILED' }
+  { label: '失败', value: 'FAILURE' }
 ];
 </script>

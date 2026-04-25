@@ -286,6 +286,40 @@ class BlogArticleControllerTest {
     }
 
     @Test
+    void shouldUpdateArticleStatusThroughArticleUpdateRequest() throws Exception {
+        BlogArticle created = buildArticle(
+                "Temp article " + UUID.randomUUID().toString().substring(0, 8),
+                randomSlug(),
+                "Initial content",
+                5L);
+        created.setArticleSummary("Initial summary");
+        created.setCategoryId(1L);
+        created.setArticleStatus("DRAFT");
+
+        long articleId = createArticle(created);
+
+        ObjectNode updateRequest = objectMapper.createObjectNode();
+        updateRequest.put("articleTitle", created.getArticleTitle() + " updated");
+        updateRequest.put("articleSlug", created.getArticleSlug());
+        updateRequest.put("articleSummary", "Updated summary");
+        updateRequest.put("articleContent", "Updated content");
+        updateRequest.put("categoryId", 1L);
+        updateRequest.put("articleStatus", "PRIVATE");
+
+        mockMvc.perform(put("/admin/article/{id}", articleId)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.articleStatus").value("PRIVATE"));
+
+        BlogArticle persisted = blogArticleMapper.selectById(articleId);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getArticleStatus()).isEqualTo("PRIVATE");
+    }
+
+    @Test
     void shouldRejectInvalidArticleStatusUpdate() throws Exception {
         mockMvc.perform(put("/admin/article/{id}/status", 1L)
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
@@ -657,6 +691,29 @@ class BlogArticleControllerTest {
                 Integer.class,
                 articleId);
         assertThat(deleted).isEqualTo(1);
+
+        Integer readableDeleteLogs = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where target_type = 'ARTICLE'
+                          and target_id = ?
+                          and action_type = 'DELETE_ARTICLE'
+                          and action_result = 'SUCCESS'
+                          and action_detail = ?
+                        """,
+                Integer.class,
+                articleId,
+                "删除文章：" + updated.getArticleTitle());
+        assertThat(readableDeleteLogs).isEqualTo(1);
+
+        Integer legacyDeleteLogs = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where target_type = 'ARTICLE'
+                          and target_id = ?
+                          and action_type = 'LOGIC_DELETE'
+                        """,
+                Integer.class,
+                articleId);
+        assertThat(legacyDeleteLogs).isZero();
     }
 
     @Test

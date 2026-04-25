@@ -15,6 +15,7 @@ public class BlogArticleUpdateRequest {
     private String coverUrl;
     private String articleContent;
     private Long categoryId;
+    private String articleStatus;
     private Boolean topFlag;
     private Boolean allowComment;
 }

@@ -78,7 +78,7 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
             throw translateWriteException(exception);
         }
         BlogFriendLink created = getBySiteUrl(normalizedSiteUrl);
-        operationLogRecordService.recordSuccess("FRIEND_LINK", created.getId(), "CREATE", "Create friend link success: " + created.getSiteName());
+        operationLogRecordService.recordSuccess("FRIEND_LINK", created.getId(), "CREATE_FRIEND_LINK", "新增友链：" + created.getSiteName());
         return created;
     }
 
@@ -111,11 +111,32 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
             if (!updateById(existing)) {
                 return null;
             }
-            operationLogRecordService.recordSuccess("FRIEND_LINK", id, "UPDATE", "Update friend link success: " + existing.getSiteName());
+            operationLogRecordService.recordSuccess("FRIEND_LINK", id, "UPDATE_FRIEND_LINK", "编辑友链：" + existing.getSiteName());
             return getById(id);
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
         }
+    }
+
+    @Override
+    public BlogFriendLink updateFriendLinkStatus(Long id, String status) {
+        BlogFriendLink existing = getById(id);
+        if (existing == null) {
+            return null;
+        }
+
+        String normalizedStatus = normalizeStatus(status, null);
+        existing.setLinkStatus(normalizedStatus);
+        existing.setUpdateTime(LocalDateTime.now());
+        if (!updateById(existing)) {
+            return null;
+        }
+        operationLogRecordService.recordSuccess(
+                "FRIEND_LINK",
+                id,
+                "CHANGE_FRIEND_LINK_STATUS",
+                "修改友链状态：" + existing.getSiteName() + " -> " + normalizedStatus);
+        return getById(id);
     }
 
     @Override
@@ -126,7 +147,7 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         }
         boolean deleted = removeById(id);
         if (deleted) {
-            operationLogRecordService.recordSuccess("FRIEND_LINK", id, "DELETE", "Delete friend link success: " + existing.getSiteName());
+            operationLogRecordService.recordSuccess("FRIEND_LINK", id, "DELETE_FRIEND_LINK", "删除友链：" + existing.getSiteName());
         }
         return deleted;
     }

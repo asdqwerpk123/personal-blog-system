@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { ElMessage } from 'element-plus';
 
+import { toChineseBusinessMessage } from '@/utils/businessErrors.js';
 import { clearStoredAuth, getStoredToken } from '@/utils/authStorage.js';
 
 const http = axios.create({
@@ -12,6 +13,15 @@ http.interceptors.request.use((config) => {
   const token = getStoredToken();
   const isLoginRequest = config.url === '/admin/auth/login';
   const isAdminRequest = config.url?.startsWith('/admin/');
+
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (typeof config.headers?.delete === 'function') {
+      config.headers.delete('Content-Type');
+      config.headers.set('Content-Type', false);
+    } else if (config.headers) {
+      config.headers['Content-Type'] = false;
+    }
+  }
 
   if (token && isAdminRequest && !isLoginRequest) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -30,7 +40,7 @@ http.interceptors.response.use(
       }
       handleUnauthorizedAdminResponse(response.config, payload.code);
 
-      return Promise.reject(new Error(payload.message || '请求失败'));
+      return Promise.reject(new Error(toChineseBusinessMessage(payload.message || '请求失败')));
     }
 
     return payload;
@@ -40,6 +50,10 @@ http.interceptors.response.use(
 
     if (status === 401) {
       handleUnauthorizedAdminResponse(error.config, status);
+    }
+
+    if (error?.message) {
+      error.message = toChineseBusinessMessage(error.message);
     }
 
     return Promise.reject(error);

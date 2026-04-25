@@ -207,6 +207,43 @@ class BlogCommentControllerTest {
     }
 
     @Test
+    void shouldDeleteCommentWithSingleReadableOperationLog() throws Exception {
+        mockMvc.perform(delete("/admin/comment/{id}", 3L)
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200));
+
+        Integer deleted = jdbcTemplate.queryForObject(
+                "select deleted from blog_comment where id = ?",
+                Integer.class,
+                3L);
+        assertThat(deleted).isEqualTo(1);
+
+        Integer readableDeleteLogs = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where target_type = 'COMMENT'
+                          and target_id = ?
+                          and action_type = 'DELETE_COMMENT'
+                          and action_result = 'SUCCESS'
+                          and action_detail = ?
+                        """,
+                Integer.class,
+                3L,
+                "删除评论：3");
+        assertThat(readableDeleteLogs).isEqualTo(1);
+
+        Integer legacyDeleteLogs = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where target_type = 'COMMENT'
+                          and target_id = ?
+                          and action_type = 'LOGIC_DELETE'
+                        """,
+                Integer.class,
+                3L);
+        assertThat(legacyDeleteLogs).isZero();
+    }
+
+    @Test
     void shouldRejectNormalUserDeletingOthersCommentThroughAdminEndpoint() throws Exception {
         mockMvc.perform(delete("/admin/comment/{id}", 1L)
                         .header("Authorization", "Bearer " + issueNormalUserAccessToken()))

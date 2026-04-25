@@ -90,8 +90,26 @@ describe('http client authorization', () => {
 
     await expect(http.get('/admin/article/1', { adapter }))
       .rejects
-      .toThrow('未授权');
+      .toThrow('未登录或登录已过期');
 
     expect(getStoredAuth().token).toBe('');
+  });
+
+  it('translates wrapped English business errors before rejecting', async () => {
+    const adapter = (config) => Promise.resolve({
+      config,
+      data: {
+        code: 400,
+        message: 'category is referenced by articles'
+      },
+      headers: {},
+      request: {},
+      status: 200,
+      statusText: 'OK'
+    });
+
+    await expect(http.delete('/admin/category/1', { adapter }))
+      .rejects
+      .toThrow('该分类下存在文章，不能删除');
   });
 });

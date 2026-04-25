@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 @Service
 public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogComment> implements IBlogCommentService {
@@ -64,7 +65,7 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         if (!updateById(existing)) {
             return null;
         }
-        operationLogRecordService.recordSuccess("COMMENT", id, "STATUS", "Update comment status success");
+        operationLogRecordService.recordSuccess("COMMENT", id, "REVIEW_COMMENT", "评论审核：" + existing.getCommentStatus());
         return getById(id);
     }
 
@@ -78,6 +79,16 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         try {
             Long operatorUserId = AdminAuthContext.requireCurrentUser().getUserId();
             jdbcTemplate.update("CALL sp_delete_comment(?, ?)", operatorUserId, id);
+            boolean replacedProcedureLog = operationLogRecordService.replaceLatestSuccess(
+                    operatorUserId,
+                    "COMMENT",
+                    id,
+                    Set.of("LOGIC_DELETE", "DELETE_COMMENT"),
+                    "DELETE_COMMENT",
+                    "删除评论：" + id);
+            if (!replacedProcedureLog) {
+                operationLogRecordService.recordSuccess("COMMENT", id, "DELETE_COMMENT", "删除评论：" + id);
+            }
             return true;
         } catch (DataAccessException exception) {
             String message = getRootMessage(exception);

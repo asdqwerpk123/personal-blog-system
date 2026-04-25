@@ -41,19 +41,20 @@ public class AuthServiceImpl implements IAuthService {
         String userName = request.getUserName().trim();
         LoginUserQueryRow row = sysUserMapper.selectLoginUserByUserName(userName);
         if (row == null) {
+            operationLogRecordService.recordFailure(null, "AUTH", null, "LOGIN_FAILURE", "登录失败：" + userName);
             throw new IllegalArgumentException("username or password is incorrect");
         }
         if (!isEnabled(row.getUserStatus()) || !passwordHashService.matches(request.getPassword(), row.getPasswordHash())) {
-            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN", "Login failed: " + row.getUserName());
+            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败：" + row.getUserName());
             throw new IllegalArgumentException("username or password is incorrect");
         }
         if (!isAdminRole(row.getRoleCode())) {
-            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN", "Login denied: " + row.getUserName());
+            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败：无后台权限 " + row.getUserName());
             throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
         }
 
         LoginUserResponse response = toResponse(row);
-        operationLogRecordService.recordSuccess(row.getId(), "AUTH", row.getId(), "LOGIN", "Login success: " + row.getUserName());
+        operationLogRecordService.recordSuccess(row.getId(), "AUTH", row.getId(), "LOGIN_SUCCESS", "登录成功：" + row.getUserName());
         return response;
     }
 

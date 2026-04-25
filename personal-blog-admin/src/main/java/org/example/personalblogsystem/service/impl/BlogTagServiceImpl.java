@@ -56,7 +56,7 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
         } catch (DataAccessException exception) {
             throw translateDuplicateTagNameException(exception);
         }
-        operationLogRecordService.recordSuccess("TAG", tag.getId(), "CREATE", "Create tag success: " + tag.getTagName());
+        operationLogRecordService.recordSuccess("TAG", tag.getId(), "CREATE_TAG", "新增标签：" + tag.getTagName());
         return getById(tag.getId());
     }
 
@@ -75,7 +75,7 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
             if (!updateById(existing)) {
                 return null;
             }
-            operationLogRecordService.recordSuccess("TAG", id, "UPDATE", "Update tag success: " + existing.getTagName());
+            operationLogRecordService.recordSuccess("TAG", id, "UPDATE_TAG", "编辑标签：" + existing.getTagName());
             return getById(id);
         } catch (DataAccessException exception) {
             throw translateDuplicateTagNameException(exception);
@@ -98,7 +98,7 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
 
         boolean deleted = removeById(id);
         if (deleted) {
-            operationLogRecordService.recordSuccess("TAG", id, "DELETE", "Delete tag success: " + existing.getTagName());
+            operationLogRecordService.recordSuccess("TAG", id, "DELETE_TAG", "删除标签：" + existing.getTagName());
         }
         return deleted;
     }

@@ -6,6 +6,9 @@ import org.example.personalblogsystem.entity.SysOperationLog;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
+
 @Service
 public class OperationLogRecordService {
 
@@ -30,7 +33,48 @@ public class OperationLogRecordService {
     }
 
     public void recordFailure(Long operatorUserId, String targetType, Long targetId, String actionType, String actionDetail) {
-        record(operatorUserId, targetType, targetId, actionType, "FAILED", actionDetail);
+        record(operatorUserId, targetType, targetId, actionType, "FAILURE", actionDetail);
+    }
+
+    public boolean replaceLatestSuccess(Long operatorUserId,
+                                        String targetType,
+                                        Long targetId,
+                                        Collection<String> candidateActionTypes,
+                                        String actionType,
+                                        String actionDetail) {
+        if (!StringUtils.hasText(targetType)
+                || targetId == null
+                || candidateActionTypes == null
+                || candidateActionTypes.isEmpty()
+                || !StringUtils.hasText(actionType)) {
+            return false;
+        }
+
+        try {
+            SysOperationLog operationLog = sysOperationLogService.lambdaQuery()
+                    .eq(operatorUserId != null, SysOperationLog::getOperatorUserId, operatorUserId)
+                    .isNull(operatorUserId == null, SysOperationLog::getOperatorUserId)
+                    .eq(SysOperationLog::getTargetType, targetType.trim())
+                    .eq(SysOperationLog::getTargetId, targetId)
+                    .eq(SysOperationLog::getActionResult, "SUCCESS")
+                    .in(SysOperationLog::getActionType, candidateActionTypes.stream()
+                            .filter(StringUtils::hasText)
+                            .map(String::trim)
+                            .toList())
+                    .orderByDesc(SysOperationLog::getId)
+                    .last("limit 1")
+                    .one();
+            if (operationLog == null) {
+                return false;
+            }
+
+            operationLog.setActionType(actionType.trim());
+            operationLog.setActionDetail(normalizeDetail(actionDetail));
+            operationLog.setUpdateTime(LocalDateTime.now());
+            return sysOperationLogService.updateById(operationLog);
+        } catch (RuntimeException ignored) {
+            return false;
+        }
     }
 
     private void record(Long operatorUserId,
@@ -39,8 +83,7 @@ public class OperationLogRecordService {
                         String actionType,
                         String actionResult,
                         String actionDetail) {
-        if (operatorUserId == null || targetId == null
-                || !StringUtils.hasText(targetType)
+        if (!StringUtils.hasText(targetType)
                 || !StringUtils.hasText(actionType)
                 || !StringUtils.hasText(actionResult)) {
             return;

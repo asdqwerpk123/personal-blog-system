@@ -14,8 +14,7 @@ describe('admin routes', () => {
       '评论审核',
       '友链管理',
       '操作日志',
-      '用户管理',
-      '角色字典'
+      '用户管理'
     ]);
   });
 
@@ -28,7 +27,7 @@ describe('admin routes', () => {
       '/admin/friend-links',
       '/admin/logs',
       '/admin/users',
-      '/admin/roles'
+      '/admin/profile'
     ];
 
     for (const path of p1Paths) {
@@ -37,5 +36,13 @@ describe('admin routes', () => {
       expect(leaf?.components?.default).toBeTruthy();
       expect(leaf.components.default).not.toBe(PlaceholderView);
     }
+  });
+
+  it('does not expose the removed role dictionary route', () => {
+    const adminRoute = router.getRoutes().find((route) => route.path === '/admin');
+    const rolesChild = adminRoute.children.find((route) => route.path === 'roles');
+
+    expect(rolesChild).toBeUndefined();
+    expect(router.resolve('/admin/roles').matched.at(-1)?.redirect).toBe('/admin/dashboard');
   });
 });

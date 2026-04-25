@@ -54,6 +54,13 @@ public class BlogFriendLinkController {
         return updatedFriendLink == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedFriendLink);
     }
 
+    @PutMapping("/{id}/status")
+    public Result<BlogFriendLink> updateStatus(@PathVariable Long id, @RequestParam String status) {
+        validateStatusIfPresent(status);
+        BlogFriendLink updatedFriendLink = blogFriendLinkService.updateFriendLinkStatus(id, status);
+        return updatedFriendLink == null ? Result.fail(ResultCodeEnum.NOT_FOUND) : Result.ok(updatedFriendLink);
+    }
+
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         return blogFriendLinkService.deleteFriendLink(id) ? Result.ok(null) : Result.fail(ResultCodeEnum.NOT_FOUND);

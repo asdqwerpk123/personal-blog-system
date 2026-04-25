@@ -175,11 +175,11 @@ CREATE TABLE blog_friend_link (
 
 CREATE TABLE sys_operation_log (
     id BIGINT PRIMARY KEY AUTO_INCREMENT COMMENT '主键',
-    operator_user_id BIGINT NOT NULL COMMENT '操作人用户ID',
+    operator_user_id BIGINT NULL COMMENT '操作人用户ID',
     target_type VARCHAR(30) NOT NULL COMMENT '目标对象类型',
-    target_id BIGINT NOT NULL COMMENT '目标对象ID',
+    target_id BIGINT NULL COMMENT '目标对象ID',
     action_type VARCHAR(30) NOT NULL COMMENT '操作类型',
-    action_result ENUM('SUCCESS', 'FAILED') NOT NULL DEFAULT 'SUCCESS' COMMENT '操作结果',
+    action_result ENUM('SUCCESS', 'FAILURE') NOT NULL DEFAULT 'SUCCESS' COMMENT '操作结果',
     action_detail VARCHAR(255) NOT NULL COMMENT '操作详情',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -375,8 +375,8 @@ proc_label: BEGIN
     INSERT INTO sys_operation_log (
         operator_user_id, target_type, target_id, action_type, action_result, action_detail
     ) VALUES (
-        p_operator_user_id, 'USER', p_target_user_id, 'LOGIC_DELETE', 'SUCCESS',
-        CONCAT('Delete user success. operator_role=', v_operator_role_code, ', target_role=', v_target_role_code)
+        p_operator_user_id, 'USER', p_target_user_id, 'DELETE_USER', 'SUCCESS',
+        CONCAT('删除用户：', p_target_user_id, '，操作者角色=', v_operator_role_code, '，目标角色=', v_target_role_code)
     );
 END $$
 
@@ -439,8 +439,8 @@ proc_label: BEGIN
     INSERT INTO sys_operation_log (
         operator_user_id, target_type, target_id, action_type, action_result, action_detail
     ) VALUES (
-        p_operator_user_id, 'ARTICLE', p_article_id, 'LOGIC_DELETE', 'SUCCESS',
-        CONCAT('Delete article success. operator_role=', v_operator_role_code)
+        p_operator_user_id, 'ARTICLE', p_article_id, 'DELETE_ARTICLE', 'SUCCESS',
+        CONCAT('删除文章：', p_article_id)
     );
 END $$
 
@@ -497,8 +497,8 @@ proc_label: BEGIN
     INSERT INTO sys_operation_log (
         operator_user_id, target_type, target_id, action_type, action_result, action_detail
     ) VALUES (
-        p_operator_user_id, 'COMMENT', p_comment_id, 'LOGIC_DELETE', 'SUCCESS',
-        CONCAT('Delete comment success. operator_role=', v_operator_role_code)
+        p_operator_user_id, 'COMMENT', p_comment_id, 'DELETE_COMMENT', 'SUCCESS',
+        CONCAT('删除评论：', p_comment_id)
     );
 END $$
 

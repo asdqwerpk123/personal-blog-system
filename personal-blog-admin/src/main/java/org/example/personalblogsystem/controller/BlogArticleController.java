@@ -251,6 +251,7 @@ public class BlogArticleController {
                 request.getCategoryId(),
                 request.getTopFlag(),
                 request.getAllowComment());
+        article.setArticleStatus(request.getArticleStatus());
         return article;
     }
 

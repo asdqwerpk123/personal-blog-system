@@ -4,10 +4,15 @@ const adminApiPrefixes = [
   '^/admin/category($|/)',
   '^/admin/tag($|/)',
   '^/admin/comment($|/)',
+  '^/admin/dashboard/summary($|/)',
+  '^/admin/files($|/)',
   '^/admin/friend-link($|/)',
   '^/admin/log($|/)',
+  '^/admin/operation-log($|/)',
+  '^/admin/profile/(me|password)($|/)',
   '^/admin/user($|/)',
-  '^/admin/role($|/)'
+  '^/admin/role($|/)',
+  '^/uploads($|/)'
 ];
 
 export function createAdminProxyConfig(target) {

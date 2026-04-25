@@ -36,9 +36,9 @@
         row-key="id"
         table-layout="fixed"
       >
-        <el-table-column label="分类ID" width="130">
-          <template #default="{ row }">
-            {{ row.id }}
+        <el-table-column label="序号" width="130">
+          <template #default="{ $index }">
+            {{ rowSequence($index) }}
           </template>
         </el-table-column>
         <el-table-column label="分类名称" min-width="160" show-overflow-tooltip>
@@ -273,6 +273,10 @@ function handlePageChange(page) {
   loadCategories();
 }
 
+function rowSequence(rowIndex) {
+  return (pagination.page - 1) * pagination.pageSize + rowIndex + 1;
+}
+
 function resetDialogForm() {
   form.id = null;
   form.categoryName = '';
@@ -380,6 +384,7 @@ defineExpose({
   openCreateDialog,
   openEditDialog,
   pagination,
+  rowSequence,
   submitCategory
 });
 </script>

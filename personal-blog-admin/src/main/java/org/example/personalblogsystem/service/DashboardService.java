@@ -2,8 +2,10 @@ package org.example.personalblogsystem.service;
 
 import org.example.personalblogsystem.dto.DashboardSummaryResponse;
 import org.example.personalblogsystem.entity.BlogArticle;
+import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.entity.BlogComment;
 import org.example.personalblogsystem.entity.SysOperationLog;
+import org.example.personalblogsystem.entity.SysUser;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -15,19 +17,22 @@ public class DashboardService {
     private final IBlogCommentService blogCommentService;
     private final IBlogFriendLinkService blogFriendLinkService;
     private final ISysOperationLogService sysOperationLogService;
+    private final ISysUserService sysUserService;
 
     public DashboardService(IBlogArticleService blogArticleService,
                             IBlogCategoryService blogCategoryService,
                             IBlogTagService blogTagService,
                             IBlogCommentService blogCommentService,
                             IBlogFriendLinkService blogFriendLinkService,
-                            ISysOperationLogService sysOperationLogService) {
+                            ISysOperationLogService sysOperationLogService,
+                            ISysUserService sysUserService) {
         this.blogArticleService = blogArticleService;
         this.blogCategoryService = blogCategoryService;
         this.blogTagService = blogTagService;
         this.blogCommentService = blogCommentService;
         this.blogFriendLinkService = blogFriendLinkService;
         this.sysOperationLogService = sysOperationLogService;
+        this.sysUserService = sysUserService;
     }
 
     public DashboardSummaryResponse getSummary() {
@@ -54,13 +59,15 @@ public class DashboardService {
                 .stream()
                 .map(this::toCommentItem)
                 .toList());
-        response.setLatestLogs(sysOperationLogService.lambdaQuery()
+        var latestOperationLogs = sysOperationLogService.lambdaQuery()
                 .orderByDesc(SysOperationLog::getCreateTime, SysOperationLog::getId)
                 .last("limit 5")
                 .list()
                 .stream()
                 .map(this::toLogItem)
-                .toList());
+                .toList();
+        response.setLatestOperationLogs(latestOperationLogs);
+        response.setLatestLogs(latestOperationLogs);
         return response;
     }
 
@@ -69,6 +76,7 @@ public class DashboardService {
         item.setId(article.getId());
         item.setArticleTitle(article.getArticleTitle());
         item.setCategoryId(article.getCategoryId());
+        item.setCategoryName(resolveCategoryName(article.getCategoryId()));
         item.setArticleStatus(article.getArticleStatus());
         item.setViewCount(article.getViewCount());
         item.setUpdateTime(article.getUpdateTime());
@@ -79,7 +87,9 @@ public class DashboardService {
         DashboardSummaryResponse.CommentItem item = new DashboardSummaryResponse.CommentItem();
         item.setId(comment.getId());
         item.setArticleId(comment.getArticleId());
+        item.setArticleTitle(resolveArticleTitle(comment.getArticleId()));
         item.setUserId(comment.getUserId());
+        item.setNickName(resolveUserDisplayName(comment.getUserId()));
         item.setCommentContent(comment.getCommentContent());
         item.setCommentStatus(comment.getCommentStatus());
         item.setCreateTime(comment.getCreateTime());
@@ -91,6 +101,7 @@ public class DashboardService {
         DashboardSummaryResponse.LogItem item = new DashboardSummaryResponse.LogItem();
         item.setId(operationLog.getId());
         item.setOperatorUserId(operationLog.getOperatorUserId());
+        item.setOperatorUserName(resolveUserDisplayName(operationLog.getOperatorUserId()));
         item.setTargetType(operationLog.getTargetType());
         item.setTargetId(operationLog.getTargetId());
         item.setActionType(operationLog.getActionType());
@@ -98,5 +109,35 @@ public class DashboardService {
         item.setActionDetail(operationLog.getActionDetail());
         item.setCreateTime(operationLog.getCreateTime());
         return item;
+    }
+
+    private String resolveCategoryName(Long categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+
+        BlogCategory category = blogCategoryService.getById(categoryId);
+        return category == null ? null : category.getCategoryName();
+    }
+
+    private String resolveArticleTitle(Long articleId) {
+        if (articleId == null) {
+            return null;
+        }
+
+        BlogArticle article = blogArticleService.getById(articleId);
+        return article == null ? null : article.getArticleTitle();
+    }
+
+    private String resolveUserDisplayName(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+
+        SysUser user = sysUserService.getById(userId);
+        if (user == null) {
+            return null;
+        }
+        return user.getNickName() == null || user.getNickName().isBlank() ? user.getUserName() : user.getNickName();
     }
 }

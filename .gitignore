@@ -37,3 +37,7 @@ personal-blog-admin-web/node_modules/
 personal-blog-admin-web/dist/
 personal-blog-admin-web/coverage/
 personal-blog-admin-web/.vite/
+
+### Runtime uploads ###
+uploads/
+personal-blog-admin/uploads/

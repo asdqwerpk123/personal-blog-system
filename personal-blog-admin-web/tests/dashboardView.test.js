@@ -34,7 +34,7 @@ vi.mock('../src/api/dashboard.js', () => ({
           updateTime: '2026-04-22T09:20:00'
         }
       ],
-      latestLogs: [
+      latestOperationLogs: [
         {
           id: 11,
           operatorUserId: 1,

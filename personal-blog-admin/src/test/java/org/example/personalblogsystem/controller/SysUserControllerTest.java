@@ -19,6 +19,7 @@ import java.util.LinkedHashMap;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -82,7 +83,8 @@ class SysUserControllerTest {
         mockMvc.perform(get("/admin/user/2")
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("admin_zhang", "123456")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(400));
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("无权限管理该用户"));
     }
 
     @Test
@@ -126,6 +128,63 @@ class SysUserControllerTest {
                 .andExpect(jsonPath("$.data.roleName").value("管理员"))
                 .andExpect(jsonPath("$.data.userStatus").value("ENABLED"))
                 .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void shouldRejectSuperAdminCreatingAnotherSuperAdmin() throws Exception {
+        mockMvc.perform(post("/admin/user")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "userName", "new_root",
+                                "password", "123456",
+                                "nickName", "New Root",
+                                "email", "new_root@blog.local",
+                                "phone", "13800000016",
+                                "roleId", 1
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("无权限管理该用户"));
+    }
+
+    @Test
+    void shouldRejectAdminCreatingAdminUser() throws Exception {
+        mockMvc.perform(post("/admin/user")
+                        .header("Authorization", "Bearer " + loginAndGetAccessToken("admin_zhang", "123456"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "userName", "bad_admin",
+                                "password", "123456",
+                                "nickName", "Bad Admin",
+                                "email", "bad_admin@blog.local",
+                                "phone", "13800000026",
+                                "roleId", 2
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("无权限管理该用户"));
+    }
+
+    @Test
+    void shouldRejectCurrentUserStatusAndPasswordManagement() throws Exception {
+        String token = loginAndGetAccessToken("root", "123456");
+
+        mockMvc.perform(put("/admin/user/1/status")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("userStatus", "DISABLED"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("无权限管理该用户"));
+
+        mockMvc.perform(put("/admin/user/1/password/reset")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("newPassword", "654321"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("无权限管理该用户"));
     }
 
     @Test

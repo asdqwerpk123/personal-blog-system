@@ -45,6 +45,7 @@ describe('authStorage', () => {
       roleId: '1',
       roleCode: 'SUPER_ADMIN',
       roleName: '超级管理员',
+      avatarUrl: '',
       remember: true
     });
     expect(sessionStorage.getItem('PB_ADMIN_TOKEN')).toBeNull();
@@ -70,6 +71,7 @@ describe('authStorage', () => {
       roleId: '2',
       roleCode: 'ADMIN',
       roleName: '管理员',
+      avatarUrl: '',
       remember: false
     });
     expect(localStorage.getItem('PB_ADMIN_TOKEN')).toBeNull();
@@ -97,6 +99,7 @@ describe('authStorage', () => {
       roleId: '',
       roleCode: '',
       roleName: '',
+      avatarUrl: '',
       remember: true
     });
   });

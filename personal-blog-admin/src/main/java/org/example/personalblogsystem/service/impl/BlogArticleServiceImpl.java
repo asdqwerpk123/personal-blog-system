@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * <p>
@@ -79,7 +80,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         } catch (DataAccessException exception) {
             throw translateDuplicateArticleSlugException(exception);
         }
-        operationLogRecordService.recordSuccess("ARTICLE", article.getId(), "CREATE", "Create article success: " + article.getArticleTitle());
+        operationLogRecordService.recordSuccess("ARTICLE", article.getId(), "CREATE_ARTICLE", "新增文章：" + article.getArticleTitle());
         return getById(article.getId());
     }
 
@@ -100,6 +101,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         existing.setCoverUrl(article.getCoverUrl());
         existing.setArticleContent(article.getArticleContent());
         existing.setCategoryId(article.getCategoryId());
+        if (article.getArticleStatus() != null) {
+            existing.setArticleStatus(normalizeStatus(article.getArticleStatus(), null));
+        }
         existing.setTopFlag(article.getTopFlag() == null ? existing.getTopFlag() : article.getTopFlag());
         existing.setAllowComment(article.getAllowComment() == null ? existing.getAllowComment() : article.getAllowComment());
         existing.setAuthorId(preservedAuthorId);
@@ -109,7 +113,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             if (!updateById(existing)) {
                 return null;
             }
-            operationLogRecordService.recordSuccess("ARTICLE", id, "UPDATE", "Update article success: " + existing.getArticleTitle());
+            operationLogRecordService.recordSuccess("ARTICLE", id, "UPDATE_ARTICLE", "编辑文章：" + existing.getArticleTitle());
             return getById(id);
         } catch (DataAccessException exception) {
             throw translateDuplicateArticleSlugException(exception);
@@ -128,7 +132,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         if (!updateById(existing)) {
             return null;
         }
-        operationLogRecordService.recordSuccess("ARTICLE", id, "STATUS", "Update article status success: " + existing.getArticleTitle());
+        operationLogRecordService.recordSuccess("ARTICLE", id, "CHANGE_ARTICLE_STATUS", "修改文章状态：" + existing.getArticleTitle() + " -> " + existing.getArticleStatus());
         return getById(id);
     }
 
@@ -141,7 +145,18 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
 
         try {
             AdminAuthPrincipal currentUser = AdminAuthContext.requireCurrentUser();
-            jdbcTemplate.update("CALL sp_delete_article(?, ?)", currentUser.getUserId(), id);
+            Long operatorUserId = currentUser.getUserId();
+            jdbcTemplate.update("CALL sp_delete_article(?, ?)", operatorUserId, id);
+            boolean replacedProcedureLog = operationLogRecordService.replaceLatestSuccess(
+                    operatorUserId,
+                    "ARTICLE",
+                    id,
+                    Set.of("LOGIC_DELETE", "DELETE_ARTICLE"),
+                    "DELETE_ARTICLE",
+                    "删除文章：" + existing.getArticleTitle());
+            if (!replacedProcedureLog) {
+                operationLogRecordService.recordSuccess("ARTICLE", id, "DELETE_ARTICLE", "删除文章：" + existing.getArticleTitle());
+            }
             return true;
         } catch (DataAccessException exception) {
             String message = getRootMessage(exception);

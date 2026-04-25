@@ -6,8 +6,8 @@ import ArticlesView from '@/views/ArticlesView.vue';
 import CategoriesView from '@/views/CategoriesView.vue';
 import CommentModerationView from '@/views/admin/CommentModerationView.vue';
 import FriendLinkManagementView from '@/views/admin/FriendLinkManagementView.vue';
+import AdminProfileView from '@/views/admin/AdminProfileView.vue';
 import OperationLogView from '@/views/admin/OperationLogView.vue';
-import RoleDictionaryView from '@/views/admin/RoleDictionaryView.vue';
 import TagManagementView from '@/views/admin/TagManagementView.vue';
 import UserManagementView from '@/views/admin/UserManagementView.vue';
 import DashboardView from '@/views/DashboardView.vue';
@@ -22,7 +22,6 @@ const adminRouteComponents = {
   dashboard: DashboardView,
   friendLinks: FriendLinkManagementView,
   logs: OperationLogView,
-  roles: RoleDictionaryView,
   tags: TagManagementView,
   users: UserManagementView
 };
@@ -52,7 +51,17 @@ const router = createRouter({
           title: route.title,
           icon: route.icon
         }
-      }))
+      })).concat([
+        {
+          path: 'profile',
+          name: 'profile',
+          component: AdminProfileView,
+          meta: {
+            title: '个人资料',
+            hidden: true
+          }
+        }
+      ])
     },
     {
       path: '/:pathMatch(.*)*',

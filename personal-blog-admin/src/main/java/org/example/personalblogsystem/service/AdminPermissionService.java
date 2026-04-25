@@ -1,5 +1,6 @@
 package org.example.personalblogsystem.service;
 
+import org.example.personalblogcommon.exception.BlogException;
 import org.example.personalblogsystem.auth.AdminAuthPrincipal;
 import org.example.personalblogsystem.entity.SysRole;
 import org.example.personalblogsystem.entity.SysUser;
@@ -16,11 +17,13 @@ public class AdminPermissionService {
     public static final String ROLE_USER = "USER";
     public static final String USER_STATUS_ENABLED = "ENABLED";
     public static final String USER_STATUS_DISABLED = "DISABLED";
+    private static final int FORBIDDEN_CODE = 403;
+    private static final String FORBIDDEN_MESSAGE = "无权限管理该用户";
 
     public void requireUserManagementAccess(AdminAuthPrincipal principal) {
         String roleCode = requireRoleCode(principal);
         if (!ROLE_SUPER_ADMIN.equalsIgnoreCase(roleCode) && !ROLE_ADMIN.equalsIgnoreCase(roleCode)) {
-            throw new IllegalArgumentException("user role cannot access admin management endpoints");
+            throw forbidden();
         }
     }
 
@@ -28,7 +31,7 @@ public class AdminPermissionService {
         requireUserManagementAccess(principal);
         requireRole(targetRole);
         if (ROLE_SUPER_ADMIN.equalsIgnoreCase(targetRole.getRoleCode())) {
-            throw new IllegalArgumentException("cannot create SUPER_ADMIN");
+            throw forbidden();
         }
         requireCanAssignRequestedRole(principal, targetRole);
     }
@@ -43,10 +46,10 @@ public class AdminPermissionService {
                 && Objects.equals(currentRole.getId(), requestedRole.getId())
                 && ROLE_SUPER_ADMIN.equalsIgnoreCase(currentRole.getRoleCode());
         if (ROLE_SUPER_ADMIN.equalsIgnoreCase(requestedRole.getRoleCode()) && !keepsOwnSuperAdminRole) {
-            throw new IllegalArgumentException("cannot assign SUPER_ADMIN");
+            throw forbidden();
         }
         if (isSelf(principal, targetUser) && !Objects.equals(currentRole.getId(), requestedRole.getId())) {
-            throw new IllegalArgumentException("cannot change own role");
+            throw forbidden();
         }
         requireCanAssignRequestedRole(principal, requestedRole);
     }
@@ -55,6 +58,9 @@ public class AdminPermissionService {
         requireUserManagementAccess(principal);
         requireUser(targetUser);
         requireRole(currentRole);
+        if (isSelf(principal, targetUser)) {
+            throw forbidden();
+        }
         requireCanManageCurrentRole(principal, targetUser, currentRole);
     }
 
@@ -63,10 +69,10 @@ public class AdminPermissionService {
         requireUser(targetUser);
         requireRole(currentRole);
         if (isSelf(principal, targetUser)) {
-            throw new IllegalArgumentException("cannot disable current user");
+            throw forbidden();
         }
         if (ROLE_SUPER_ADMIN.equalsIgnoreCase(currentRole.getRoleCode())) {
-            throw new IllegalArgumentException("cannot disable SUPER_ADMIN");
+            throw forbidden();
         }
         requireCanManageCurrentRole(principal, targetUser, currentRole);
     }
@@ -92,15 +98,15 @@ public class AdminPermissionService {
         String operatorRoleCode = requireRoleCode(principal);
         if (ROLE_SUPER_ADMIN.equalsIgnoreCase(operatorRoleCode)) {
             if (ROLE_SUPER_ADMIN.equalsIgnoreCase(currentRole.getRoleCode()) && !isSelf(principal, targetUser)) {
-                throw new IllegalArgumentException("cannot manage SUPER_ADMIN");
+                throw forbidden();
             }
             return;
         }
         if (!ROLE_ADMIN.equalsIgnoreCase(operatorRoleCode)) {
-            throw new IllegalArgumentException("user role cannot access admin management endpoints");
+            throw forbidden();
         }
         if (!ROLE_USER.equalsIgnoreCase(currentRole.getRoleCode())) {
-            throw new IllegalArgumentException("administrator can only manage USER");
+            throw forbidden();
         }
     }
 
@@ -110,10 +116,10 @@ public class AdminPermissionService {
             return;
         }
         if (!ROLE_ADMIN.equalsIgnoreCase(operatorRoleCode)) {
-            throw new IllegalArgumentException("user role cannot access admin management endpoints");
+            throw forbidden();
         }
         if (!ROLE_USER.equalsIgnoreCase(requestedRole.getRoleCode())) {
-            throw new IllegalArgumentException("administrator can only manage USER");
+            throw forbidden();
         }
     }
 
@@ -131,9 +137,13 @@ public class AdminPermissionService {
 
     private String requireRoleCode(AdminAuthPrincipal principal) {
         if (principal == null || !StringUtils.hasText(principal.getRoleCode())) {
-            throw new IllegalArgumentException("user role cannot access admin management endpoints");
+            throw forbidden();
         }
         return principal.getRoleCode().trim();
+    }
+
+    private BlogException forbidden() {
+        return new BlogException(FORBIDDEN_CODE, FORBIDDEN_MESSAGE);
     }
 
     private boolean isSelf(AdminAuthPrincipal principal, SysUser targetUser) {

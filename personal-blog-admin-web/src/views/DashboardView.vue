@@ -127,6 +127,7 @@ const summary = ref({
   friendLinkCount: 0,
   latestArticles: [],
   latestComments: [],
+  latestOperationLogs: [],
   latestLogs: []
 });
 const lastUpdatedAt = ref(null);
@@ -179,12 +180,12 @@ const latestComments = computed(() => (summary.value.latestComments || []).map((
   };
 }));
 
-const operationLogs = computed(() => (summary.value.latestLogs || []).map((log) => ({
+const operationLogs = computed(() => (summary.value.latestOperationLogs || summary.value.latestLogs || []).map((log) => ({
   user: log.operatorUserName || (log.operatorUserId ? `用户 ${log.operatorUserId}` : '系统'),
   action: log.actionDetail || `${log.actionType || '-'} ${log.targetType || ''}`.trim(),
   time: formatTime(log.createTime || log.updateTime),
   ip: log.targetType || '-',
-  state: log.actionResult === 'FAILED' ? 'danger' : 'success'
+  state: ['FAILED', 'FAILURE'].includes(String(log.actionResult || '').toUpperCase()) ? 'danger' : 'success'
 })));
 
 const lastUpdatedLabel = computed(() => {

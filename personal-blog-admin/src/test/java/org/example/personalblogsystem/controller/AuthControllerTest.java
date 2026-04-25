@@ -79,9 +79,9 @@ class AuthControllerTest {
                         where operator_user_id = 1
                           and target_type = 'AUTH'
                           and target_id = 1
-                          and action_type = 'LOGIN'
+                          and action_type = 'LOGIN_SUCCESS'
                           and action_result = 'SUCCESS'
-                          and action_detail like '%Login success%'
+                          and action_detail like '%登录成功%'
                         """,
                 Integer.class);
         assertThat(logCount).isEqualTo(1);
@@ -123,9 +123,9 @@ class AuthControllerTest {
                         where operator_user_id = 1
                           and target_type = 'AUTH'
                           and target_id = 1
-                          and action_type = 'LOGIN'
-                          and action_result = 'FAILED'
-                          and action_detail like '%Login failed%'
+                          and action_type = 'LOGIN_FAILURE'
+                          and action_result = 'FAILURE'
+                          and action_detail like '%登录失败%'
                         """,
                 Integer.class);
         assertThat(logCount).isEqualTo(1);
@@ -147,9 +147,9 @@ class AuthControllerTest {
                         where operator_user_id = 5
                           and target_type = 'AUTH'
                           and target_id = 5
-                          and action_type = 'LOGIN'
-                          and action_result = 'FAILED'
-                          and action_detail like '%Login denied%'
+                          and action_type = 'LOGIN_FAILURE'
+                          and action_result = 'FAILURE'
+                          and action_detail like '%登录失败%'
                         """,
                 Integer.class);
         assertThat(logCount).isEqualTo(1);
@@ -190,8 +190,15 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.code").value(400))
                 .andExpect(jsonPath("$.message").value("username or password is incorrect"));
 
-        Integer logCount = jdbcTemplate.queryForObject("select count(*) from sys_operation_log", Integer.class);
-        assertThat(logCount).isZero();
+        Integer logCount = jdbcTemplate.queryForObject("""
+                        select count(*) from sys_operation_log
+                        where target_type = 'AUTH'
+                          and action_type = 'LOGIN_FAILURE'
+                          and action_result = 'FAILURE'
+                          and action_detail like '%missing-user%'
+                        """,
+                Integer.class);
+        assertThat(logCount).isEqualTo(1);
     }
 
     private LoginRequest loginRequest(String userName, String password) {

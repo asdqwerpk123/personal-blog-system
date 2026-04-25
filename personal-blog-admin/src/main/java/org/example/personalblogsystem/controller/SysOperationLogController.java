@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/admin/operation-log")
+@RequestMapping({"/admin/operation-log", "/admin/log"})
 public class SysOperationLogController {
 
     private static final long MAX_PAGE_SIZE = 100L;
