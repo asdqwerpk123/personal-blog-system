@@ -32,21 +32,28 @@
 
     <section class="admin-main">
       <header class="admin-topbar">
-        <div class="topbar-search">
-          <el-icon><Search /></el-icon>
-          <input type="search" placeholder="搜索..." aria-label="搜索" />
-        </div>
-
         <div class="topbar-actions">
           <button class="icon-button" type="button" aria-label="通知">
             <Bell />
             <span class="notice-dot"></span>
           </button>
-          <div class="profile">
-            <span class="profile__avatar">{{ userInitial }}</span>
-            <span class="profile__name">{{ displayName }}</span>
-            <el-icon><ArrowDown /></el-icon>
-          </div>
+          <el-dropdown trigger="click" @command="handleProfileCommand">
+            <button class="profile profile--button" type="button" aria-label="用户菜单">
+              <span class="profile__avatar">
+                <img v-if="authStore.avatarUrl" class="profile__avatar-img" :src="authStore.avatarUrl" alt="头像" />
+                <span v-else>{{ userInitial }}</span>
+              </span>
+              <span class="profile__name">{{ displayName }}</span>
+              <el-icon><ArrowDown /></el-icon>
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="profile">个人资料</el-dropdown-item>
+                <el-dropdown-item command="password">修改密码</el-dropdown-item>
+                <el-dropdown-item divided command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </header>
 
@@ -66,10 +73,8 @@ import {
   Document,
   Grid,
   Link,
-  Lock,
   Notebook,
   PriceTag,
-  Search,
   SwitchButton,
   TrendCharts,
   User
@@ -90,7 +95,6 @@ const iconMap = {
   Document,
   Grid,
   Link,
-  Lock,
   PriceTag,
   TrendCharts,
   User
@@ -101,6 +105,24 @@ const userInitial = computed(() => displayName.value.slice(0, 1).toUpperCase());
 
 function handleLogout() {
   authStore.logout();
-  router.push('/login');
+  return router.push('/login');
 }
+
+function handleProfileCommand(command) {
+  if (command === 'profile') {
+    return router.push('/admin/profile');
+  }
+
+  if (command === 'password') {
+    return router.push('/admin/profile?tab=password');
+  }
+
+  if (command === 'logout') {
+    return handleLogout();
+  }
+}
+
+defineExpose({
+  handleProfileCommand
+});
 </script>

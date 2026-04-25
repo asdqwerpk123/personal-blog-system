@@ -15,6 +15,7 @@ import { deleteComment, getArticleComments, getCommentPage, updateCommentStatus 
 import { getDashboardSummary } from '../src/api/dashboard.js';
 import { createFriendLink, deleteFriendLink, getFriendLinkPage, updateFriendLink } from '../src/api/friendLinks.js';
 import { getOperationLogPage } from '../src/api/operationLogs.js';
+import { getMyProfile, updateMyPassword, updateMyProfile, uploadAvatar } from '../src/api/profile.js';
 import { getRole, getRoleList } from '../src/api/roles.js';
 import { createTag, deleteTag, getTagPage, updateTag } from '../src/api/tags.js';
 import {
@@ -59,6 +60,23 @@ describe('admin API modules', () => {
     expect(http.get).toHaveBeenCalledWith('/admin/role/list');
   });
 
+  it('wraps current profile endpoints', () => {
+    const file = new File(['avatar'], 'avatar.png', { type: 'image/png' });
+
+    getMyProfile();
+    updateMyProfile({ nickName: 'Root' });
+    updateMyPassword({ oldPassword: '123456', newPassword: '654321' });
+    uploadAvatar(file);
+
+    expect(http.get).toHaveBeenCalledWith('/admin/profile/me');
+    expect(http.put).toHaveBeenCalledWith('/admin/profile/me', { nickName: 'Root' });
+    expect(http.put).toHaveBeenCalledWith('/admin/profile/password', {
+      oldPassword: '123456',
+      newPassword: '654321'
+    });
+    expect(http.post).toHaveBeenCalledWith('/admin/files/avatar', expect.any(FormData));
+  });
+
   it('wraps content, taxonomy, moderation, friend-link, and log endpoints', () => {
     getArticlePage({ current: 1, size: 10, keyword: 'Vue' });
     createArticle({ title: '新文章' });
@@ -98,7 +116,7 @@ describe('admin API modules', () => {
     expect(http.get).toHaveBeenCalledWith('/admin/category/4');
     expect(http.get).toHaveBeenCalledWith('/admin/comment/article/3');
     expect(http.put).toHaveBeenCalledWith('/admin/comment/6/status', null, { params: { status: 'APPROVED' } });
-    expect(http.get).toHaveBeenCalledWith('/admin/operation-log/page', {
+    expect(http.get).toHaveBeenCalledWith('/admin/log/page', {
       params: { current: 1, size: 10, operatorUserId: 7, targetType: 'ARTICLE', actionResult: 'SUCCESS' }
     });
     expect(http.get).toHaveBeenCalledWith('/admin/dashboard/summary');

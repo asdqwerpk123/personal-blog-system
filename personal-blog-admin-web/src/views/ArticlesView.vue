@@ -60,7 +60,11 @@
         row-key="id"
         table-layout="fixed"
       >
-        <el-table-column prop="id" label="ID" width="86" />
+        <el-table-column label="序号" width="86">
+          <template #default="{ $index }">
+            {{ rowSequence($index) }}
+          </template>
+        </el-table-column>
         <el-table-column label="标题" min-width="220" show-overflow-tooltip>
           <template #default="{ row }">
             <span class="article-title-text">{{ getArticleTitle(row) }}</span>
@@ -134,6 +138,132 @@
         />
       </div>
     </section>
+
+    <el-drawer
+      v-model="articleDialogVisible"
+      :title="articleDialogTitle"
+      size="620px"
+      destroy-on-close
+      :close-on-click-modal="false"
+      class="article-editor-drawer"
+    >
+      <el-form
+        ref="articleFormRef"
+        class="article-editor-form"
+        :model="articleForm"
+        :rules="articleRules"
+        label-position="top"
+      >
+        <el-form-item label="文章标题" prop="articleTitle">
+          <el-input v-model.trim="articleForm.articleTitle" maxlength="200" placeholder="请输入文章标题" />
+        </el-form-item>
+
+        <el-form-item label="短链接" prop="articleSlug">
+          <el-input v-model.trim="articleForm.articleSlug" maxlength="200" placeholder="例如 spring-boot-notes" />
+        </el-form-item>
+
+        <el-form-item label="分类" prop="categoryId">
+          <el-select v-model="articleForm.categoryId" class="article-full-control" clearable filterable placeholder="请选择分类">
+            <el-option
+              v-for="category in remoteCategoryOptions"
+              :key="category.value"
+              :label="category.label"
+              :value="category.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="状态" prop="articleStatus">
+          <el-select v-model="articleForm.articleStatus" class="article-full-control" placeholder="请选择状态">
+            <el-option
+              v-for="status in articleStatusOptions"
+              :key="status.value"
+              :label="status.label"
+              :value="status.value"
+            />
+          </el-select>
+        </el-form-item>
+
+        <el-form-item label="摘要" prop="articleSummary">
+          <el-input
+            v-model="articleForm.articleSummary"
+            maxlength="500"
+            placeholder="请输入文章摘要"
+            resize="none"
+            :rows="3"
+            type="textarea"
+          />
+        </el-form-item>
+
+        <el-form-item label="封面图地址" prop="coverUrl">
+          <el-input v-model.trim="articleForm.coverUrl" placeholder="请输入封面图 URL" />
+        </el-form-item>
+
+        <el-form-item label="正文" prop="articleContent">
+          <el-input
+            v-model="articleForm.articleContent"
+            placeholder="请输入文章正文"
+            resize="vertical"
+            :rows="8"
+            type="textarea"
+          />
+        </el-form-item>
+
+        <div class="article-switch-grid">
+          <el-form-item label="是否置顶" prop="topFlag">
+            <el-switch v-model="articleForm.topFlag" active-text="置顶" inactive-text="不置顶" />
+          </el-form-item>
+          <el-form-item label="是否允许评论" prop="allowComment">
+            <el-switch v-model="articleForm.allowComment" active-text="允许" inactive-text="关闭" />
+          </el-form-item>
+        </div>
+      </el-form>
+
+      <template #footer>
+        <div class="article-drawer-footer">
+          <el-button @click="articleDialogVisible = false">取消</el-button>
+          <el-button type="primary" :loading="submitLoading" @click="submitArticle">保存</el-button>
+        </div>
+      </template>
+    </el-drawer>
+
+    <el-dialog
+      v-model="detailDialogVisible"
+      title="文章详情"
+      width="720px"
+      class="article-detail-dialog"
+      destroy-on-close
+    >
+      <el-descriptions :column="2" border>
+        <el-descriptions-item label="标题" :span="2">
+          {{ articleDetail.articleTitle || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="分类">
+          {{ getCategoryLabel(articleDetail) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="状态">
+          {{ getStatusMeta(articleDetail).label }}
+        </el-descriptions-item>
+        <el-descriptions-item label="发布时间">
+          {{ formatDate(articleDetail.publishedTime || articleDetail.createTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="浏览量">
+          {{ formatNumber(articleDetail.viewCount || 0) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="短链接" :span="2">
+          {{ articleDetail.articleSlug || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="摘要" :span="2">
+          {{ articleDetail.articleSummary || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="封面图" :span="2">
+          {{ articleDetail.coverUrl || '-' }}
+        </el-descriptions-item>
+        <el-descriptions-item label="正文" :span="2">
+          <div class="article-detail-content">{{ articleDetail.articleContent || '-' }}</div>
+        </el-descriptions-item>
+      </el-descriptions>
+    </el-dialog>
   </section>
 </template>
 
@@ -148,12 +278,15 @@ import {
   View
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref } from 'vue';
 
 import {
+  createArticle,
   deleteArticle,
+  getArticle,
   getArticlePage,
   getCategoryList,
+  updateArticle,
   updateArticleStatus
 } from '@/api/articles.js';
 
@@ -175,6 +308,7 @@ const statusOptions = [
   { label: '草稿', value: 'DRAFT' },
   { label: '已下线', value: 'PRIVATE' }
 ];
+const articleStatusOptions = statusOptions.filter((status) => status.value);
 
 const filters = reactive({
   title: '',
@@ -189,12 +323,37 @@ const pagination = reactive({
 });
 
 const loading = ref(false);
+const submitLoading = ref(false);
 const articleRows = ref([]);
 const categoryOptions = ref([{ label: '全部', value: '', source: 'all' }]);
 const statusLoadingId = ref(null);
 const deleteLoadingId = ref(null);
+const articleDialogVisible = ref(false);
+const detailDialogVisible = ref(false);
+const dialogMode = ref('create');
+const editingArticleId = ref(null);
+const articleFormRef = ref(null);
+const articleDetail = ref({});
+const articleForm = reactive({
+  articleTitle: '',
+  articleSlug: '',
+  categoryId: '',
+  articleStatus: 'DRAFT',
+  articleSummary: '',
+  coverUrl: '',
+  articleContent: '',
+  topFlag: false,
+  allowComment: true
+});
+const articleRules = {
+  articleTitle: [{ required: true, message: '请输入文章标题', trigger: 'blur' }],
+  articleSlug: [{ required: true, message: '请输入短链接', trigger: 'blur' }],
+  articleContent: [{ required: true, message: '请输入文章正文', trigger: 'blur' }]
+};
 
 const totalPages = computed(() => Math.max(1, Math.ceil(pagination.total / pagination.pageSize)));
+const articleDialogTitle = computed(() => (dialogMode.value === 'edit' ? '编辑文章' : '新增文章'));
+const remoteCategoryOptions = computed(() => categoryOptions.value.filter((category) => category.source === 'remote'));
 const categoryNameById = computed(() => {
   const map = new Map();
 
@@ -356,16 +515,106 @@ function handlePageChange(page) {
   loadArticles();
 }
 
-function handleCreate() {
-  ElMessage.info('新增文章功能已预留，后续可接入编辑弹窗或独立编辑页');
+function rowSequence(rowIndex) {
+  return (pagination.page - 1) * pagination.pageSize + rowIndex + 1;
 }
 
-function handleView(row) {
-  ElMessage.info(`查看文章：${getArticleTitle(row)}`);
+async function handleCreate() {
+  dialogMode.value = 'create';
+  editingArticleId.value = null;
+  resetArticleForm();
+  articleDialogVisible.value = true;
+  await nextTick();
+  articleFormRef.value?.clearValidate();
 }
 
-function handleEdit(row) {
-  ElMessage.info(`编辑文章：${getArticleTitle(row)}`);
+async function handleView(row) {
+  try {
+    articleDetail.value = extractData(await getArticle(row.id));
+    detailDialogVisible.value = true;
+  } catch (error) {
+    ElMessage.error(error.message || '文章详情加载失败');
+  }
+}
+
+async function handleEdit(row) {
+  dialogMode.value = 'edit';
+  editingArticleId.value = row.id;
+  articleDialogVisible.value = true;
+
+  try {
+    fillArticleForm(extractData(await getArticle(row.id)));
+    await nextTick();
+    articleFormRef.value?.clearValidate();
+  } catch (error) {
+    articleDialogVisible.value = false;
+    ElMessage.error(error.message || '文章详情加载失败');
+  }
+}
+
+function resetArticleForm() {
+  articleForm.articleTitle = '';
+  articleForm.articleSlug = '';
+  articleForm.categoryId = '';
+  articleForm.articleStatus = 'DRAFT';
+  articleForm.articleSummary = '';
+  articleForm.coverUrl = '';
+  articleForm.articleContent = '';
+  articleForm.topFlag = false;
+  articleForm.allowComment = true;
+}
+
+function fillArticleForm(article) {
+  articleForm.articleTitle = article.articleTitle || '';
+  articleForm.articleSlug = article.articleSlug || '';
+  articleForm.categoryId = article.categoryId ?? '';
+  articleForm.articleStatus = article.articleStatus || 'DRAFT';
+  articleForm.articleSummary = article.articleSummary || '';
+  articleForm.coverUrl = article.coverUrl || '';
+  articleForm.articleContent = article.articleContent || '';
+  articleForm.topFlag = Boolean(article.topFlag);
+  articleForm.allowComment = article.allowComment !== false;
+}
+
+function buildArticlePayload() {
+  return {
+    articleTitle: articleForm.articleTitle,
+    articleSlug: articleForm.articleSlug,
+    categoryId: articleForm.categoryId === '' ? null : articleForm.categoryId,
+    articleStatus: articleForm.articleStatus,
+    articleSummary: articleForm.articleSummary,
+    coverUrl: articleForm.coverUrl,
+    articleContent: articleForm.articleContent,
+    topFlag: articleForm.topFlag,
+    allowComment: articleForm.allowComment
+  };
+}
+
+async function submitArticle() {
+  try {
+    await articleFormRef.value?.validate();
+  } catch {
+    return;
+  }
+
+  submitLoading.value = true;
+
+  try {
+    const payload = buildArticlePayload();
+    if (dialogMode.value === 'edit') {
+      await updateArticle(editingArticleId.value, payload);
+      ElMessage.success('文章已更新');
+    } else {
+      await createArticle(payload);
+      ElMessage.success('文章已新增');
+    }
+    articleDialogVisible.value = false;
+    await loadArticles();
+  } catch (error) {
+    ElMessage.error(error.message || '文章保存失败');
+  } finally {
+    submitLoading.value = false;
+  }
 }
 
 async function handleStatusToggle(row) {
@@ -409,10 +658,20 @@ onMounted(() => {
 });
 
 defineExpose({
+  articleDetail,
+  articleDialogTitle,
+  articleDialogVisible,
+  articleForm,
   articleRows,
   categoryOptions,
+  detailDialogVisible,
   filters,
-  pagination
+  handleCreate,
+  handleEdit,
+  handleView,
+  pagination,
+  rowSequence,
+  submitArticle
 });
 </script>
 
@@ -633,6 +892,38 @@ defineExpose({
 .article-pagination :deep(.el-pagination.is-background .el-pager li.is-active) {
   color: var(--color-primary);
   background: #eef4ff;
+}
+
+.article-editor-form {
+  padding: 4px 4px 20px;
+}
+
+.article-editor-form :deep(.el-form-item) {
+  margin-bottom: 20px;
+}
+
+.article-full-control {
+  width: 100%;
+}
+
+.article-switch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.article-drawer-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.article-detail-content {
+  max-height: 260px;
+  overflow: auto;
+  color: #4a566b;
+  line-height: 1.7;
+  white-space: pre-wrap;
 }
 
 @media (max-width: 1180px) {

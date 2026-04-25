@@ -12,5 +12,7 @@ public interface IBlogFriendLinkService extends IService<BlogFriendLink> {
 
     BlogFriendLink updateFriendLink(Long id, BlogFriendLink friendLink);
 
+    BlogFriendLink updateFriendLinkStatus(Long id, String status);
+
     boolean deleteFriendLink(Long id);
 }

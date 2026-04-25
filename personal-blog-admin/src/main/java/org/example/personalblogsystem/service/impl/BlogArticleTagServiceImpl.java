@@ -79,7 +79,7 @@ public class BlogArticleTagServiceImpl extends ServiceImpl<BlogArticleTagMapper,
         }
 
         List<BlogTag> tags = listTagsByArticleId(articleId);
-        operationLogRecordService.recordSuccess("ARTICLE", articleId, "UPDATE_TAGS", "Update article tags success");
+        operationLogRecordService.recordSuccess("ARTICLE", articleId, "UPDATE_TAGS", "更新文章标签：" + articleId);
         return tags;
     }
 

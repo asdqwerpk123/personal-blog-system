@@ -20,6 +20,7 @@ export const useAuthStore = defineStore('auth', {
       roleId: stored.roleId,
       roleCode: stored.roleCode,
       roleName: stored.roleName,
+      avatarUrl: stored.avatarUrl,
       remember: stored.remember
     };
   },
@@ -36,6 +37,7 @@ export const useAuthStore = defineStore('auth', {
       this.roleId = stored.roleId;
       this.roleCode = stored.roleCode;
       this.roleName = stored.roleName;
+      this.avatarUrl = stored.avatarUrl;
       this.remember = stored.remember;
     },
     async login({ userName, password, remember }) {
@@ -53,6 +55,7 @@ export const useAuthStore = defineStore('auth', {
       this.roleId = response?.data?.roleId ? String(response.data.roleId) : '';
       this.roleCode = response?.data?.roleCode || '';
       this.roleName = response?.data?.roleName || '';
+      this.avatarUrl = response?.data?.avatarUrl || '';
       this.remember = remember;
       persistAuth({
         token,
@@ -62,7 +65,23 @@ export const useAuthStore = defineStore('auth', {
         roleId: this.roleId,
         roleCode: this.roleCode,
         roleName: this.roleName,
+        avatarUrl: this.avatarUrl,
         remember
+      });
+    },
+    updateProfile(profile = {}) {
+      this.nickName = profile.nickName ?? this.nickName;
+      this.avatarUrl = profile.avatarUrl ?? this.avatarUrl;
+      persistAuth({
+        token: this.token,
+        userName: this.userName,
+        userId: this.userId,
+        nickName: this.nickName,
+        roleId: this.roleId,
+        roleCode: this.roleCode,
+        roleName: this.roleName,
+        avatarUrl: this.avatarUrl,
+        remember: this.remember
       });
     },
     logout() {
@@ -74,6 +93,7 @@ export const useAuthStore = defineStore('auth', {
       this.roleId = '';
       this.roleCode = '';
       this.roleName = '';
+      this.avatarUrl = '';
     }
   }
 });

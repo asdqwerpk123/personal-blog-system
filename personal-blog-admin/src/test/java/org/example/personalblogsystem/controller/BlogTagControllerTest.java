@@ -312,9 +312,9 @@ class BlogTagControllerTest {
                 .andExpect(jsonPath("$.code").value(200));
 
         assertThat(blogTagMapper.selectById(tagId)).isNull();
-        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "CREATE")).isEqualTo(1);
-        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "UPDATE")).isEqualTo(1);
-        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "DELETE")).isEqualTo(1);
+        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "CREATE_TAG")).isEqualTo(1);
+        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "UPDATE_TAG")).isEqualTo(1);
+        assertThat(countOperationLogs(session.userId(), "TAG", tagId, "DELETE_TAG")).isEqualTo(1);
     }
 
     @Test

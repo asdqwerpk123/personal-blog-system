@@ -5,6 +5,8 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.auth.AdminAuthPrincipal;
+import org.example.personalblogsystem.dto.AdminPasswordChangeRequest;
+import org.example.personalblogsystem.dto.AdminProfileUpdateRequest;
 import org.example.personalblogsystem.dto.SysUserCreateRequest;
 import org.example.personalblogsystem.dto.SysUserPasswordResetRequest;
 import org.example.personalblogsystem.dto.SysUserResponse;
@@ -116,7 +118,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         user.setRoleId(roleId);
         user.setUserStatus(userStatus);
         save(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "CREATE", "Create user success: " + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "CREATE_USER", "新增用户：" + user.getUserName());
         return toResponse(user);
     }
 
@@ -143,7 +145,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         user.setIntroduction(trimToNull(request.getIntroduction()));
         user.setRoleId(roleId);
         updateById(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "UPDATE", "Update user success: " + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "UPDATE_USER", "编辑用户：" + user.getUserName());
         return toResponse(user);
     }
 
@@ -157,7 +159,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         adminPermissionService.requireCanUpdateStatus(current, user, role);
         user.setUserStatus(userStatus);
         updateById(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "STATUS", "Update user status success: " + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "CHANGE_USER_STATUS", "禁用/启用用户：" + user.getUserName());
         return toResponse(user);
     }
 
@@ -171,8 +173,62 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         adminPermissionService.requireCanResetPassword(current, user, role);
         user.setPasswordHash(passwordHashService.hash(newPassword));
         updateById(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "RESET_PASSWORD", "Reset user password success: " + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "RESET_USER_PASSWORD", "重置用户密码：" + user.getUserName());
         return toResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public SysUserResponse getCurrentProfile() {
+        AdminAuthPrincipal current = AdminAuthContext.requireCurrentUser();
+        return toResponse(requireExistingUser(current.getUserId()));
+    }
+
+    @Override
+    @Transactional
+    public SysUserResponse updateCurrentProfile(AdminProfileUpdateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("profile request must not be null");
+        }
+
+        AdminAuthPrincipal current = AdminAuthContext.requireCurrentUser();
+        SysUser user = requireExistingUser(current.getUserId());
+        String email = trimToNull(request.getEmail());
+        String phone = trimToNull(request.getPhone());
+        assertUniqueEmailIfPresent(email, user.getId());
+        assertUniquePhoneIfPresent(phone, user.getId());
+
+        user.setNickName(trimToNull(request.getNickName()));
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setAvatarUrl(trimToNull(request.getAvatarUrl()));
+        user.setIntroduction(trimToNull(request.getIntroduction()));
+        updateById(user);
+        operationLogRecordService.recordSuccess("USER_PROFILE", user.getId(), "UPDATE_PROFILE", "修改个人资料：" + user.getUserName());
+        return toResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public void changeCurrentPassword(AdminPasswordChangeRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("password request must not be null");
+        }
+
+        AdminAuthPrincipal current = AdminAuthContext.requireCurrentUser();
+        SysUser user = requireExistingUser(current.getUserId());
+        String oldPassword = requireText(request.getOldPassword(), "oldPassword must not be blank");
+        String newPassword = requireText(request.getNewPassword(), "newPassword must not be blank");
+        if (newPassword.length() < 6) {
+            throw new IllegalArgumentException("newPassword length must be at least 6");
+        }
+        if (!passwordHashService.matches(oldPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("原密码错误");
+        }
+
+        user.setPasswordHash(passwordHashService.hash(newPassword));
+        updateById(user);
+        operationLogRecordService.recordSuccess("USER_PROFILE", user.getId(), "CHANGE_OWN_PASSWORD", "修改自己密码：" + user.getUserName());
     }
 
     private SysUser requireExistingUser(Long id) {
@@ -252,6 +308,18 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 .ne(excludeId != null, SysUser::getId, excludeId)
                 .count() > 0) {
             throw new IllegalArgumentException("phone already exists");
+        }
+    }
+
+    private void assertUniqueEmailIfPresent(String email, Long excludeId) {
+        if (StringUtils.hasText(email)) {
+            assertUniqueEmail(email, excludeId);
+        }
+    }
+
+    private void assertUniquePhoneIfPresent(String phone, Long excludeId) {
+        if (StringUtils.hasText(phone)) {
+            assertUniquePhone(phone, excludeId);
         }
     }
 

@@ -5,6 +5,7 @@ const NICK_NAME_KEY = 'PB_ADMIN_NICK_NAME';
 const ROLE_ID_KEY = 'PB_ADMIN_ROLE_ID';
 const ROLE_CODE_KEY = 'PB_ADMIN_ROLE_CODE';
 const ROLE_NAME_KEY = 'PB_ADMIN_ROLE_NAME';
+const AVATAR_URL_KEY = 'PB_ADMIN_AVATAR_URL';
 const REMEMBER_KEY = 'PB_ADMIN_REMEMBER';
 
 function stripBearer(token) {
@@ -19,7 +20,8 @@ function readFrom(storage) {
     nickName: storage.getItem(NICK_NAME_KEY) || '',
     roleId: storage.getItem(ROLE_ID_KEY) || '',
     roleCode: storage.getItem(ROLE_CODE_KEY) || '',
-    roleName: storage.getItem(ROLE_NAME_KEY) || ''
+    roleName: storage.getItem(ROLE_NAME_KEY) || '',
+    avatarUrl: storage.getItem(AVATAR_URL_KEY) || ''
   };
 }
 
@@ -31,6 +33,7 @@ function clearStorage(storage) {
   storage.removeItem(ROLE_ID_KEY);
   storage.removeItem(ROLE_CODE_KEY);
   storage.removeItem(ROLE_NAME_KEY);
+  storage.removeItem(AVATAR_URL_KEY);
 }
 
 export function extractAccessToken(payload) {
@@ -51,7 +54,7 @@ function setOptional(storage, key, value) {
   storage.setItem(key, value == null ? '' : String(value));
 }
 
-export function persistAuth({ token, userName, userId, nickName, roleId, roleCode, roleName, remember }) {
+export function persistAuth({ token, userName, userId, nickName, roleId, roleCode, roleName, avatarUrl, remember }) {
   const targetStorage = remember ? localStorage : sessionStorage;
   const staleStorage = remember ? sessionStorage : localStorage;
 
@@ -63,6 +66,7 @@ export function persistAuth({ token, userName, userId, nickName, roleId, roleCod
   setOptional(targetStorage, ROLE_ID_KEY, roleId);
   setOptional(targetStorage, ROLE_CODE_KEY, roleCode);
   setOptional(targetStorage, ROLE_NAME_KEY, roleName);
+  setOptional(targetStorage, AVATAR_URL_KEY, avatarUrl);
   localStorage.setItem(REMEMBER_KEY, remember ? 'true' : 'false');
 }
 

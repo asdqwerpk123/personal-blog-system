@@ -40,11 +40,22 @@
         <el-table-column prop="createTime" label="创建时间" min-width="170" />
         <el-table-column label="操作" width="280" align="right" fixed="right">
           <template #default="{ row }">
-            <el-button link type="primary" @click="openEdit(row)">编辑</el-button>
-            <el-button link :type="isDisabled(row) ? 'success' : 'warning'" @click="toggleStatus(row)">
-              {{ isDisabled(row) ? '启用' : '启禁' }}
-            </el-button>
-            <el-button link type="primary" @click="openPassword(row)">重置密码</el-button>
+            <el-tooltip :content="canManageUser(row) ? '编辑' : '无权限管理该用户'" placement="top">
+              <el-button link type="primary" :disabled="!canManageUser(row)" @click="openEdit(row)">编辑</el-button>
+            </el-tooltip>
+            <el-tooltip :content="canToggleStatus(row) ? (isDisabled(row) ? '启用' : '禁用') : '无权限管理该用户'" placement="top">
+              <el-button
+                link
+                :type="isDisabled(row) ? 'success' : 'warning'"
+                :disabled="!canToggleStatus(row)"
+                @click="toggleStatus(row)"
+              >
+                {{ isDisabled(row) ? '启用' : '禁用' }}
+              </el-button>
+            </el-tooltip>
+            <el-tooltip :content="canResetPassword(row) ? '重置密码' : '无权限管理该用户'" placement="top">
+              <el-button link type="primary" :disabled="!canResetPassword(row)" @click="openPassword(row)">重置密码</el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -82,7 +93,7 @@
         </el-form-item>
         <el-form-item label="角色">
           <el-select v-model="form.roleId" class="full-select" placeholder="选择可分配角色">
-            <el-option v-for="role in roles" :key="role.id" :label="role.roleName" :value="role.id" />
+            <el-option v-for="role in assignableRoles" :key="role.id" :label="role.roleName" :value="role.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="状态">
@@ -114,12 +125,14 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 
 import { getRoleList } from '@/api/roles.js';
 import { createUser, getUserPage, resetUserPassword, updateUser, updateUserStatus } from '@/api/users.js';
+import { useAuthStore } from '@/stores/auth.js';
 import { normalizePage, unwrapData } from './pageData.js';
 
+const authStore = useAuthStore();
 const loading = ref(false);
 const users = ref([]);
 const roles = ref([]);
@@ -140,8 +153,71 @@ const form = reactive({
   userStatus: 'ENABLED'
 });
 
+const roleById = computed(() => {
+  const map = new Map();
+  for (const role of roles.value) {
+    map.set(String(role.id), role);
+  }
+  return map;
+});
+
+const assignableRoles = computed(() => {
+  const currentRole = String(authStore.roleCode || '').toUpperCase();
+  return roles.value.filter((role) => {
+    const code = String(role.roleCode || '').toUpperCase();
+    if (currentRole === 'SUPER_ADMIN') {
+      return ['ADMIN', 'USER'].includes(code);
+    }
+    if (currentRole === 'ADMIN') {
+      return code === 'USER';
+    }
+    return false;
+  });
+});
+
 function roleName(roleId) {
   return roles.value.find((role) => String(role.id) === String(roleId))?.roleName;
+}
+
+function roleCode(row) {
+  return String(row.roleCode || roleById.value.get(String(row.roleId))?.roleCode || '').toUpperCase();
+}
+
+function isCurrentUser(row) {
+  return String(row.id) === String(authStore.userId);
+}
+
+function canManageUser(row) {
+  const currentRole = String(authStore.roleCode || '').toUpperCase();
+  const targetRole = roleCode(row);
+
+  if (currentRole === 'SUPER_ADMIN') {
+    return ['ADMIN', 'USER'].includes(targetRole);
+  }
+  if (currentRole === 'ADMIN') {
+    return targetRole === 'USER';
+  }
+  return false;
+}
+
+function canToggleStatus(row) {
+  return canManageUser(row) && !isCurrentUser(row);
+}
+
+function canResetPassword(row) {
+  return canManageUser(row) && !isCurrentUser(row);
+}
+
+function ensureCanManage(row) {
+  if (!canManageUser(row)) {
+    ElMessage.warning('无权限管理该用户');
+    return false;
+  }
+  return true;
+}
+
+function isAssignableRole(roleId) {
+  return assignableRoles.value.some((role) => String(role.id) === String(roleId));
 }
 
 function isDisabled(row) {
@@ -156,6 +232,9 @@ function resetForm(row = {}) {
   form.password = '';
   form.roleId = row.roleId || '';
   form.userStatus = row.userStatus || 'ENABLED';
+  if (!form.roleId && assignableRoles.value.length) {
+    form.roleId = assignableRoles.value[0].id;
+  }
 }
 
 async function loadUsers() {
@@ -182,12 +261,20 @@ function openCreate() {
 }
 
 function openEdit(row) {
+  if (!ensureCanManage(row)) {
+    return;
+  }
   editingId.value = row.id;
   resetForm(row);
   formVisible.value = true;
 }
 
 async function saveUser() {
+  if (!isAssignableRole(form.roleId)) {
+    ElMessage.warning('无权限管理该用户');
+    return;
+  }
+
   const payload = { ...form };
 
   if (editingId.value) {
@@ -203,6 +290,11 @@ async function saveUser() {
 }
 
 async function toggleStatus(row) {
+  if (!canToggleStatus(row)) {
+    ElMessage.warning('无权限管理该用户');
+    return;
+  }
+
   const nextStatus = isDisabled(row) ? 'ENABLED' : 'DISABLED';
   await ElMessageBox.confirm(`确认${nextStatus === 'DISABLED' ? '禁用' : '启用'}该用户？`, '启禁确认', { type: 'warning' });
   await updateUserStatus(row.id, nextStatus);
@@ -211,6 +303,10 @@ async function toggleStatus(row) {
 }
 
 function openPassword(row) {
+  if (!canResetPassword(row)) {
+    ElMessage.warning('无权限管理该用户');
+    return;
+  }
   passwordUserId.value = row.id;
   newPassword.value = '';
   passwordVisible.value = true;
@@ -224,5 +320,15 @@ async function savePassword() {
 
 onMounted(async () => {
   await Promise.all([loadUsers(), loadRoles()]);
+});
+
+defineExpose({
+  assignableRoles,
+  canManageUser,
+  canResetPassword,
+  canToggleStatus,
+  form,
+  isCurrentUser,
+  users
 });
 </script>

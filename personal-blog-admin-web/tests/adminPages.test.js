@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils';
 import ElementPlus from 'element-plus';
+import { createPinia } from 'pinia';
 import { describe, expect, it, vi } from 'vitest';
 
 import UserManagementView from '../src/views/admin/UserManagementView.vue';
@@ -62,7 +63,7 @@ describe('P1 admin pages', () => {
   it('renders user management with search, create, role assignment, status, and password actions', async () => {
     const wrapper = mount(UserManagementView, {
       global: {
-        plugins: [ElementPlus]
+        plugins: [createPinia(), ElementPlus]
       }
     });
 
@@ -74,7 +75,7 @@ describe('P1 admin pages', () => {
     expect(text).toContain('邮箱');
     expect(text).toContain('手机号');
     expect(text).toContain('角色');
-    expect(text).toContain('启禁');
+    expect(text).toContain('启禁状态');
     expect(text).toContain('重置密码');
   });
 

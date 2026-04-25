@@ -29,7 +29,12 @@ public class SysOperationLogServiceImpl extends ServiceImpl<SysOperationLogMappe
             queryWrapper.eq(SysOperationLog::getTargetType, targetType.trim());
         }
         if (actionResult != null) {
-            queryWrapper.eq(SysOperationLog::getActionResult, normalizeActionResult(actionResult));
+            String normalizedActionResult = normalizeActionResult(actionResult);
+            if ("FAILURE".equals(normalizedActionResult)) {
+                queryWrapper.in(SysOperationLog::getActionResult, "FAILURE", "FAILED");
+            } else {
+                queryWrapper.eq(SysOperationLog::getActionResult, normalizedActionResult);
+            }
         }
         queryWrapper.orderByDesc(SysOperationLog::getCreateTime, SysOperationLog::getId);
         return page(new Page<>(current, size), queryWrapper);
@@ -38,12 +43,15 @@ public class SysOperationLogServiceImpl extends ServiceImpl<SysOperationLogMappe
     private String normalizeActionResult(String actionResult) {
         String value = actionResult == null ? null : actionResult.trim();
         if (!StringUtils.hasText(value)) {
-            throw new IllegalArgumentException("actionResult must be one of SUCCESS, FAILED");
+            throw new IllegalArgumentException("actionResult must be one of SUCCESS, FAILURE");
         }
 
         String normalized = value.toUpperCase(Locale.ROOT);
-        if (!"SUCCESS".equals(normalized) && !"FAILED".equals(normalized)) {
-            throw new IllegalArgumentException("actionResult must be one of SUCCESS, FAILED");
+        if ("FAILED".equals(normalized)) {
+            return "FAILURE";
+        }
+        if (!"SUCCESS".equals(normalized) && !"FAILURE".equals(normalized)) {
+            throw new IllegalArgumentException("actionResult must be one of SUCCESS, FAILURE");
         }
         return normalized;
     }

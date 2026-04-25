@@ -18,6 +18,7 @@ public class DashboardSummaryResponse {
     private long friendLinkCount;
     private List<ArticleItem> latestArticles;
     private List<CommentItem> latestComments;
+    private List<LogItem> latestOperationLogs;
     private List<LogItem> latestLogs;
 
     @Getter
@@ -26,6 +27,7 @@ public class DashboardSummaryResponse {
         private Long id;
         private String articleTitle;
         private Long categoryId;
+        private String categoryName;
         private String articleStatus;
         private Integer viewCount;
         private LocalDateTime updateTime;
@@ -36,7 +38,9 @@ public class DashboardSummaryResponse {
     public static class CommentItem {
         private Long id;
         private Long articleId;
+        private String articleTitle;
         private Long userId;
+        private String nickName;
         private String commentContent;
         private String commentStatus;
         private LocalDateTime createTime;
@@ -48,6 +52,7 @@ public class DashboardSummaryResponse {
     public static class LogItem {
         private Long id;
         private Long operatorUserId;
+        private String operatorUserName;
         private String targetType;
         private Long targetId;
         private String actionType;

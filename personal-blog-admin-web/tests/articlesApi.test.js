@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  createArticle,
   deleteArticle,
+  getArticle,
   getArticlePage,
   getCategoryList,
+  updateArticle,
   updateArticleStatus
 } from '../src/api/articles.js';
 import { persistAuth } from '../src/utils/authStorage.js';
@@ -54,7 +57,7 @@ describe('article admin API', () => {
     expect(capturedConfigs[0].headers.Authorization).toBe('Bearer admin-token');
   });
 
-  it('uses real category list, delete, and status endpoints', async () => {
+  it('uses real category list, detail, save, delete, and status endpoints', async () => {
     const capturedConfigs = [];
     const adapter = (config) => {
       capturedConfigs.push(config);
@@ -70,14 +73,42 @@ describe('article admin API', () => {
     };
 
     await getCategoryList({ adapter });
+    await getArticle(101, { adapter });
+    await createArticle({
+      articleTitle: '新文章',
+      articleSlug: 'new-article',
+      articleStatus: 'DRAFT',
+      articleContent: '正文'
+    }, { adapter });
+    await updateArticle(101, {
+      articleTitle: '编辑文章',
+      articleSlug: 'edit-article',
+      articleStatus: 'PRIVATE',
+      articleContent: '新正文'
+    }, { adapter });
     await deleteArticle(101, { adapter });
     await updateArticleStatus(101, 'PRIVATE', { adapter });
 
     expect(capturedConfigs.map((config) => `${config.method} ${config.url}`)).toEqual([
       'get /admin/category/list',
+      'get /admin/article/101',
+      'post /admin/article',
+      'put /admin/article/101',
       'delete /admin/article/101',
       'put /admin/article/101/status'
     ]);
-    expect(capturedConfigs[2].params).toEqual({ status: 'PRIVATE' });
+    expect(JSON.parse(capturedConfigs[2].data)).toEqual({
+      articleTitle: '新文章',
+      articleSlug: 'new-article',
+      articleStatus: 'DRAFT',
+      articleContent: '正文'
+    });
+    expect(JSON.parse(capturedConfigs[3].data)).toEqual({
+      articleTitle: '编辑文章',
+      articleSlug: 'edit-article',
+      articleStatus: 'PRIVATE',
+      articleContent: '新正文'
+    });
+    expect(capturedConfigs[5].params).toEqual({ status: 'PRIVATE' });
   });
 });

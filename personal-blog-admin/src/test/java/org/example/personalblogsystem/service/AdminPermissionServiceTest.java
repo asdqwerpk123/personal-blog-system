@@ -16,8 +16,8 @@ class AdminPermissionServiceTest {
     void shouldRejectUnknownRoleForManagementAccess() {
         assertThatThrownBy(() ->
                 adminPermissionService.requireUserManagementAccess(new AdminAuthPrincipal(7L, "ghost", 99L, "GUEST")))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("user role cannot access admin management endpoints");
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("无权限管理该用户");
     }
 
     @Test
@@ -33,5 +33,21 @@ class AdminPermissionServiceTest {
         assertThatCode(() ->
                 adminPermissionService.requireCanUpdateUser(principal, targetUser, superAdminRole, superAdminRole))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void shouldRejectResettingCurrentUserPasswordInUserManagement() {
+        AdminAuthPrincipal principal = new AdminAuthPrincipal(2L, "admin", 2L, "ADMIN");
+        SysUser targetUser = new SysUser();
+        targetUser.setId(2L);
+        targetUser.setRoleId(2L);
+        SysRole adminRole = new SysRole();
+        adminRole.setId(2L);
+        adminRole.setRoleCode("ADMIN");
+
+        assertThatThrownBy(() ->
+                adminPermissionService.requireCanResetPassword(principal, targetUser, adminRole))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("无权限管理该用户");
     }
 }

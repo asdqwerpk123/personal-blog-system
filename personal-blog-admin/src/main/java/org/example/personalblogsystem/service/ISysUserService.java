@@ -2,6 +2,8 @@ package org.example.personalblogsystem.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.example.personalblogsystem.dto.AdminPasswordChangeRequest;
+import org.example.personalblogsystem.dto.AdminProfileUpdateRequest;
 import org.example.personalblogsystem.dto.SysUserCreateRequest;
 import org.example.personalblogsystem.dto.SysUserPasswordResetRequest;
 import org.example.personalblogsystem.dto.SysUserResponse;
@@ -30,4 +32,10 @@ public interface ISysUserService extends IService<SysUser> {
     SysUserResponse updateUserStatus(Long id, SysUserStatusRequest request);
 
     SysUserResponse resetPassword(Long id, SysUserPasswordResetRequest request);
+
+    SysUserResponse getCurrentProfile();
+
+    SysUserResponse updateCurrentProfile(AdminProfileUpdateRequest request);
+
+    void changeCurrentPassword(AdminPasswordChangeRequest request);
 }

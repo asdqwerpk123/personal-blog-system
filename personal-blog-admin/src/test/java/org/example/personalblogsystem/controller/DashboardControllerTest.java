@@ -42,15 +42,18 @@ class DashboardControllerTest {
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.articleCount").isNumber())
-                .andExpect(jsonPath("$.data.categoryCount").isNumber())
-                .andExpect(jsonPath("$.data.tagCount").isNumber())
-                .andExpect(jsonPath("$.data.commentCount").isNumber())
+                .andExpect(jsonPath("$.data.articleCount").value(3))
+                .andExpect(jsonPath("$.data.categoryCount").value(3))
+                .andExpect(jsonPath("$.data.tagCount").value(4))
+                .andExpect(jsonPath("$.data.commentCount").value(3))
                 .andExpect(jsonPath("$.data.pendingCommentCount").isNumber())
                 .andExpect(jsonPath("$.data.friendLinkCount").isNumber())
                 .andExpect(jsonPath("$.data.latestArticles").isArray())
+                .andExpect(jsonPath("$.data.latestArticles[?(@.id == 1)].categoryName").value("Backend"))
                 .andExpect(jsonPath("$.data.latestComments").isArray())
-                .andExpect(jsonPath("$.data.latestLogs").isArray());
+                .andExpect(jsonPath("$.data.latestComments[?(@.id == 1)].articleTitle")
+                        .value("Build a Personal Blog with Spring Boot"))
+                .andExpect(jsonPath("$.data.latestOperationLogs").isArray());
     }
 
     @Test

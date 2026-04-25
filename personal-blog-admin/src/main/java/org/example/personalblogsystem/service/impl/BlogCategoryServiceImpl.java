@@ -78,7 +78,7 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
         }
-        operationLogRecordService.recordSuccess("CATEGORY", category.getId(), "CREATE", "Create category success: " + category.getCategoryName());
+        operationLogRecordService.recordSuccess("CATEGORY", category.getId(), "CREATE_CATEGORY", "新增分类：" + category.getCategoryName());
         return getById(category.getId());
     }
 
@@ -100,7 +100,7 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
             if (!updateById(existing)) {
                 return null;
             }
-            operationLogRecordService.recordSuccess("CATEGORY", id, "UPDATE", "Update category success: " + existing.getCategoryName());
+            operationLogRecordService.recordSuccess("CATEGORY", id, "UPDATE_CATEGORY", "编辑分类：" + existing.getCategoryName());
             return getById(id);
         } catch (DataAccessException exception) {
             throw translateWriteException(exception);
@@ -122,7 +122,7 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
 
         boolean deleted = removeById(id);
         if (deleted) {
-            operationLogRecordService.recordSuccess("CATEGORY", id, "DELETE", "Delete category success: " + existing.getCategoryName());
+            operationLogRecordService.recordSuccess("CATEGORY", id, "DELETE_CATEGORY", "删除分类：" + existing.getCategoryName());
         }
         return deleted;
     }

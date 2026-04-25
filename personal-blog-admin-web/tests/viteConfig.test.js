@@ -10,5 +10,11 @@ describe('vite dev proxy', () => {
     expect(proxy['/admin/article']).toBeUndefined();
     expect(proxy['^/admin/article($|/)'].target).toBe('http://localhost:8081');
     expect(proxy['^/admin/category($|/)'].target).toBe('http://localhost:8081');
+    expect(proxy['^/admin/dashboard($|/)']).toBeUndefined();
+    expect(proxy['^/admin/dashboard/summary($|/)'].target).toBe('http://localhost:8081');
+    expect(proxy['^/admin/files($|/)'].target).toBe('http://localhost:8081');
+    expect(proxy['^/admin/profile($|/)']).toBeUndefined();
+    expect(proxy['^/admin/profile/(me|password)($|/)'].target).toBe('http://localhost:8081');
+    expect(proxy['^/uploads($|/)'].target).toBe('http://localhost:8081');
   });
 });
