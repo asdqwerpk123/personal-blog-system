@@ -4,7 +4,7 @@ import { adminMenuRoutes } from '../src/router/adminMenu.js';
 import router from '../src/router/index.js';
 import PlaceholderView from '../src/views/PlaceholderView.vue';
 
-describe('admin routes', () => {
+describe('routes', () => {
   it('contains the full first-stage admin menu with readable Chinese labels', () => {
     expect(adminMenuRoutes.map((route) => route.title)).toEqual([
       '仪表盘',
@@ -44,5 +44,26 @@ describe('admin routes', () => {
 
     expect(rolesChild).toBeUndefined();
     expect(router.resolve('/admin/roles').matched.at(-1)?.redirect).toBe('/admin/dashboard');
+  });
+
+  it('registers author center routes as real views', () => {
+    const authorPaths = [
+      '/register',
+      '/author/dashboard',
+      '/author/articles',
+      '/author/articles/new',
+      '/author/articles/edit/3',
+      '/author/articles/detail/3',
+      '/author/comments',
+      '/author/profile'
+    ];
+
+    for (const path of authorPaths) {
+      const leaf = router.resolve(path).matched.at(-1);
+      const component = leaf?.components?.default || leaf?.component;
+
+      expect(component).toBeTruthy();
+      expect(component).not.toBe(PlaceholderView);
+    }
   });
 });

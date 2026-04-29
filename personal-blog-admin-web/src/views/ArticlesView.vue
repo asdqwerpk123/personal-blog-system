@@ -2,7 +2,7 @@
   <section class="article-management">
     <div class="article-page-header">
       <h1>文章管理</h1>
-      <el-button class="create-article-button" type="primary" :icon="Plus" @click="handleCreate">
+      <el-button class="create-article-button primary-action-button" type="primary" :icon="Plus" @click="handleCreate">
         新增文章
       </el-button>
     </div>
@@ -196,7 +196,30 @@
         </el-form-item>
 
         <el-form-item label="封面图地址" prop="coverUrl">
-          <el-input v-model.trim="articleForm.coverUrl" placeholder="请输入封面图 URL" />
+          <div class="cover-url-editor">
+            <el-input
+              v-model.trim="articleForm.coverUrl"
+              placeholder="请输入封面图 URL"
+              @input="coverPreviewBroken = false"
+            />
+            <el-upload
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              :before-upload="beforeCoverUpload"
+              :http-request="uploadCover"
+              :show-file-list="false"
+            >
+              <el-button :icon="Upload" :loading="coverUploading">上传封面</el-button>
+            </el-upload>
+          </div>
+          <div v-if="articleForm.coverUrl" class="cover-preview">
+            <img
+              v-if="!coverPreviewBroken"
+              :src="articleForm.coverUrl"
+              alt="封面图预览"
+              @error="coverPreviewBroken = true"
+            />
+            <span v-else>封面图预览失败</span>
+          </div>
         </el-form-item>
 
         <el-form-item label="正文" prop="articleContent">
@@ -275,10 +298,12 @@ import {
   RefreshLeft,
   Search,
   SwitchButton,
+  Upload,
   View
 } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
-import { computed, nextTick, onMounted, reactive, ref } from 'vue';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import {
   createArticle,
@@ -289,6 +314,9 @@ import {
   updateArticle,
   updateArticleStatus
 } from '@/api/articles.js';
+import { uploadFile } from '@/api/files.js';
+
+const route = useRoute();
 
 const fallbackCategories = [
   '前端开发',
@@ -324,6 +352,8 @@ const pagination = reactive({
 
 const loading = ref(false);
 const submitLoading = ref(false);
+const coverUploading = ref(false);
+const coverPreviewBroken = ref(false);
 const articleRows = ref([]);
 const categoryOptions = ref([{ label: '全部', value: '', source: 'all' }]);
 const statusLoadingId = ref(null);
@@ -332,6 +362,7 @@ const articleDialogVisible = ref(false);
 const detailDialogVisible = ref(false);
 const dialogMode = ref('create');
 const editingArticleId = ref(null);
+const handledRouteAction = ref('');
 const articleFormRef = ref(null);
 const articleDetail = ref({});
 const articleForm = reactive({
@@ -519,6 +550,37 @@ function rowSequence(rowIndex) {
   return (pagination.page - 1) * pagination.pageSize + rowIndex + 1;
 }
 
+function beforeCoverUpload(file) {
+  if (!file.type || !file.type.startsWith('image/')) {
+    ElMessage.error('请选择图片文件');
+    return false;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('图片大小不能超过 5MB');
+    return false;
+  }
+
+  return true;
+}
+
+async function uploadCover(options) {
+  coverUploading.value = true;
+
+  try {
+    const response = await uploadFile(options.file);
+    const data = response?.data ?? response ?? {};
+    const url = response?.url || data?.url || '';
+    articleForm.coverUrl = url;
+    coverPreviewBroken.value = false;
+    ElMessage.success('封面图上传成功');
+  } catch (error) {
+    ElMessage.error(error.message || '封面图上传失败');
+  } finally {
+    coverUploading.value = false;
+  }
+}
+
 async function handleCreate() {
   dialogMode.value = 'create';
   editingArticleId.value = null;
@@ -562,6 +624,29 @@ function resetArticleForm() {
   articleForm.articleContent = '';
   articleForm.topFlag = false;
   articleForm.allowComment = true;
+  coverPreviewBroken.value = false;
+}
+
+async function handleRouteArticleAction() {
+  const action = String(route.query.action || '');
+  const id = route.query.id;
+
+  if (!id || !['view', 'edit'].includes(action)) {
+    return;
+  }
+
+  const actionKey = `${action}:${id}`;
+  if (handledRouteAction.value === actionKey) {
+    return;
+  }
+  handledRouteAction.value = actionKey;
+
+  if (action === 'view') {
+    await handleView({ id });
+    return;
+  }
+
+  await handleEdit({ id });
 }
 
 function fillArticleForm(article) {
@@ -574,6 +659,7 @@ function fillArticleForm(article) {
   articleForm.articleContent = article.articleContent || '';
   articleForm.topFlag = Boolean(article.topFlag);
   articleForm.allowComment = article.allowComment !== false;
+  coverPreviewBroken.value = false;
 }
 
 function buildArticlePayload() {
@@ -652,9 +738,17 @@ async function handleDelete(row) {
   }
 }
 
+watch(
+  () => [route.query.action, route.query.id],
+  () => {
+    handleRouteArticleAction();
+  }
+);
+
 onMounted(() => {
   loadCategories();
   loadArticles();
+  handleRouteArticleAction();
 });
 
 defineExpose({
@@ -671,7 +765,8 @@ defineExpose({
   handleView,
   pagination,
   rowSequence,
-  submitArticle
+  submitArticle,
+  uploadCover
 });
 </script>
 
@@ -699,13 +794,15 @@ defineExpose({
   min-width: 118px;
   min-height: 40px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
+  color: #ffffff;
   background: var(--color-primary);
-  box-shadow: 0 8px 18px rgba(54, 87, 245, 0.24);
+  box-shadow: 0 8px 18px rgba(54, 87, 245, 0.22);
 }
 
 .create-article-button:hover,
 .create-article-button:focus {
+  color: #ffffff;
   background: var(--color-primary-hover);
 }
 
@@ -906,6 +1003,34 @@ defineExpose({
   width: 100%;
 }
 
+.cover-url-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  width: 100%;
+}
+
+.cover-preview {
+  width: min(220px, 100%);
+  aspect-ratio: 16 / 9;
+  display: grid;
+  place-items: center;
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 7px;
+  color: #8a93a6;
+  background: #f8fafc;
+  font-size: 13px;
+}
+
+.cover-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
 .article-switch-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -945,6 +1070,10 @@ defineExpose({
 
   .create-article-button {
     width: 100%;
+  }
+
+  .cover-url-editor {
+    grid-template-columns: 1fr;
   }
 
   .article-filter-grid {

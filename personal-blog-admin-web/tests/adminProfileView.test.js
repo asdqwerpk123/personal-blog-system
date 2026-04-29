@@ -52,7 +52,7 @@ describe('AdminProfileView', () => {
     updateMyPassword.mockResolvedValue({ code: 200, data: {} });
     uploadAvatar.mockResolvedValue({
       code: 200,
-      data: { url: '/uploads/avatars/new-avatar.png' }
+      url: 'http://minio.example.com/bucket/new-avatar.png'
     });
   });
 
@@ -80,7 +80,7 @@ describe('AdminProfileView', () => {
 
     await wrapper.vm.uploadAvatarRequest({ file: new File(['avatar'], 'avatar.png', { type: 'image/png' }) });
     expect(uploadAvatar).toHaveBeenCalled();
-    expect(wrapper.vm.profileForm.avatarUrl).toBe('/uploads/avatars/new-avatar.png');
+    expect(wrapper.vm.profileForm.avatarUrl).toBe('http://minio.example.com/bucket/new-avatar.png');
 
     wrapper.vm.profileForm.nickName = 'Root Updated';
     wrapper.vm.profileForm.email = 'root-updated@blog.local';
@@ -92,7 +92,7 @@ describe('AdminProfileView', () => {
       nickName: 'Root Updated',
       email: 'root-updated@blog.local',
       phone: '13800000009',
-      avatarUrl: '/uploads/avatars/new-avatar.png',
+      avatarUrl: 'http://minio.example.com/bucket/new-avatar.png',
       introduction: '更新简介'
     });
 

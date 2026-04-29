@@ -9,6 +9,7 @@ import org.example.personalblogsystem.dto.SysUserPasswordResetRequest;
 import org.example.personalblogsystem.dto.SysUserResponse;
 import org.example.personalblogsystem.dto.SysUserStatusRequest;
 import org.example.personalblogsystem.dto.SysUserUpdateRequest;
+import org.example.personalblogsystem.dto.UserRegisterRequest;
 import org.example.personalblogsystem.entity.SysUser;
 
 /**
@@ -27,6 +28,8 @@ public interface ISysUserService extends IService<SysUser> {
 
     SysUserResponse createUser(SysUserCreateRequest request);
 
+    SysUserResponse registerUser(UserRegisterRequest request);
+
     SysUserResponse updateUser(Long id, SysUserUpdateRequest request);
 
     SysUserResponse updateUserStatus(Long id, SysUserStatusRequest request);
@@ -38,4 +41,12 @@ public interface ISysUserService extends IService<SysUser> {
     SysUserResponse updateCurrentProfile(AdminProfileUpdateRequest request);
 
     void changeCurrentPassword(AdminPasswordChangeRequest request);
+
+    SysUserResponse getUserProfile(Long userId);
+
+    SysUserResponse updateUserProfile(Long userId, AdminProfileUpdateRequest request);
+
+    SysUserResponse updateUserAvatar(Long userId, String avatarUrl);
+
+    void changeUserPassword(Long userId, AdminPasswordChangeRequest request);
 }

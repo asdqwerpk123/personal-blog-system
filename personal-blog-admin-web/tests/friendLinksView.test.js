@@ -68,9 +68,7 @@ describe('FriendLinkManagementView', () => {
     uploadFriendLinkLogo.mockResolvedValue({
       code: 200,
       message: '操作成功',
-      data: {
-        url: '/uploads/friend-links/new-logo.png'
-      }
+      url: 'http://minio.example.com/bucket/new-logo.png'
     });
   });
 
@@ -89,6 +87,7 @@ describe('FriendLinkManagementView', () => {
 
     expect(wrapper.text()).toContain('友链管理');
     expect(wrapper.text()).toContain('新增友链');
+    expect(wrapper.find('.page-heading .primary-action-button').exists()).toBe(true);
     expect(wrapper.text()).toContain('Open Source Study Notes');
     expect(wrapper.text()).toContain('待审核');
     expect(wrapper.find('img.friend-link-logo-thumb').attributes('src')).toBe('/uploads/friend-links/logo.png');
@@ -117,14 +116,14 @@ describe('FriendLinkManagementView', () => {
 
     await wrapper.vm.uploadLogo({ file: new File(['logo'], 'logo.png', { type: 'image/png' }) });
 
-    expect(wrapper.vm.form.siteLogo).toBe('/uploads/friend-links/new-logo.png');
+    expect(wrapper.vm.form.siteLogo).toBe('http://minio.example.com/bucket/new-logo.png');
 
     await wrapper.vm.submitFriendLink();
 
     expect(createFriendLink).toHaveBeenCalledWith({
       siteName: 'New Site',
       siteUrl: 'https://new.example.com',
-      siteLogo: '/uploads/friend-links/new-logo.png',
+      siteLogo: 'http://minio.example.com/bucket/new-logo.png',
       ownerName: 'New Owner',
       contactEmail: 'new@example.com',
       siteDesc: '新友链',

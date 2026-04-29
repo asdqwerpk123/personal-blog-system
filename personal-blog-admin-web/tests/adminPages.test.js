@@ -72,6 +72,7 @@ describe('P1 admin pages', () => {
     const text = wrapper.text();
     expect(text).toContain('用户管理');
     expect(text).toContain('新增用户');
+    expect(wrapper.find('.page-heading .primary-action-button').exists()).toBe(true);
     expect(text).toContain('邮箱');
     expect(text).toContain('手机号');
     expect(text).toContain('角色');
@@ -91,6 +92,7 @@ describe('P1 admin pages', () => {
     const text = wrapper.text();
     expect(text).toContain('文章管理');
     expect(text).toContain('新增文章');
+    expect(wrapper.find('.page-heading .primary-action-button').exists()).toBe(true);
     expect(text).toContain('标签');
     expect(text).toContain('发布');
     expect(text).toContain('删除');

@@ -237,8 +237,9 @@ async function uploadAvatarRequest(options) {
   avatarUploading.value = true;
   try {
     const response = await uploadAvatar(options.file);
-    const data = unwrapData(response);
-    profileForm.avatarUrl = data.url || '';
+    const data = response?.data ?? response ?? {};
+    const url = response?.url || data?.url || '';
+    profileForm.avatarUrl = url;
     avatarBroken.value = false;
     authStore.updateProfile({ avatarUrl: profileForm.avatarUrl });
     ElMessage.success('头像上传成功');

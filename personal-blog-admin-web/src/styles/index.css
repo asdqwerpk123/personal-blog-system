@@ -154,6 +154,26 @@ input {
   background: var(--color-primary-hover);
 }
 
+.login-register-entry {
+  margin: 22px 0 0;
+  text-align: center;
+  color: #7b8495;
+  font-size: 16px;
+}
+
+.login-register-entry a {
+  color: var(--color-primary);
+  font-weight: 700;
+}
+
+.register-card {
+  min-height: 760px;
+}
+
+.register-form .el-form-item {
+  margin-bottom: 18px;
+}
+
 .admin-shell {
   min-height: 100vh;
   display: flex;
@@ -260,28 +280,6 @@ input {
   gap: 24px;
 }
 
-.icon-button {
-  width: 36px;
-  height: 36px;
-  position: relative;
-  display: grid;
-  place-items: center;
-  border: 0;
-  color: #9aa3b4;
-  background: transparent;
-  cursor: pointer;
-}
-
-.notice-dot {
-  width: 6px;
-  height: 6px;
-  position: absolute;
-  top: 7px;
-  right: 8px;
-  border-radius: 999px;
-  background: #ef4452;
-}
-
 .profile {
   display: flex;
   align-items: center;
@@ -344,6 +342,54 @@ input {
 
 .page-heading span {
   color: #838da0;
+}
+
+.primary-action-button.el-button,
+.page-heading .primary-action-button.el-button,
+.article-page-header .primary-action-button.el-button,
+.category-page-header .primary-action-button.el-button {
+  min-width: 124px !important;
+  height: 44px;
+  min-height: 44px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 20px !important;
+  border: 0 !important;
+  border-radius: 7px;
+  color: #ffffff !important;
+  background: var(--color-primary) !important;
+  box-shadow: 0 8px 18px rgba(54, 87, 245, 0.22);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  --el-button-text-color: #ffffff;
+  --el-button-bg-color: var(--color-primary);
+  --el-button-border-color: var(--color-primary);
+  --el-button-hover-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--color-primary-hover);
+  --el-button-hover-border-color: var(--color-primary-hover);
+  --el-button-active-text-color: #ffffff;
+  --el-button-active-bg-color: var(--color-primary-hover);
+  --el-button-active-border-color: var(--color-primary-hover);
+}
+
+.primary-action-button.el-button:hover,
+.primary-action-button.el-button:focus {
+  color: #ffffff !important;
+  background: var(--color-primary-hover) !important;
+}
+
+.primary-action-button.el-button .el-icon,
+.primary-action-button.el-button > span {
+  color: #ffffff !important;
+}
+
+.primary-action-button.el-button.is-disabled,
+.primary-action-button.el-button:disabled {
+  opacity: 0.65;
+  box-shadow: none;
 }
 
 .stats-grid {

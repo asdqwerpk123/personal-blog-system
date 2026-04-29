@@ -12,6 +12,14 @@ const adminApiPrefixes = [
   '^/admin/profile/(me|password)($|/)',
   '^/admin/user($|/)',
   '^/admin/role($|/)',
+  '^/user/auth($|/)',
+  '^/user/articles($|/)',
+  '^/user/categories($|/)',
+  '^/user/tags($|/)',
+  '^/user/comments($|/)',
+  '^/user/dashboard($|/)',
+  '^/user/files($|/)',
+  '^/user/profile($|/)',
   '^/uploads($|/)'
 ];
 

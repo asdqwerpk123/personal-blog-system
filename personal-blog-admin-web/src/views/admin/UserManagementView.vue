@@ -5,7 +5,7 @@
         <h1>用户管理</h1>
         <span>维护后台账号、角色分配、启禁状态和重置密码</span>
       </div>
-      <el-button type="primary" @click="openCreate">新增用户</el-button>
+      <el-button class="primary-action-button" type="primary" :icon="Plus" @click="openCreate">新增用户</el-button>
     </div>
 
     <div class="panel admin-list-panel">
@@ -125,6 +125,7 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Plus } from '@element-plus/icons-vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { getRoleList } from '@/api/roles.js';

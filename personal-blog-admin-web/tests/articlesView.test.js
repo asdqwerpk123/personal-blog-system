@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import ElementPlus from 'element-plus';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createMemoryHistory, createRouter } from 'vue-router';
 
 import {
   createArticle,
@@ -9,6 +10,7 @@ import {
   getCategoryList,
   updateArticle
 } from '../src/api/articles.js';
+import { uploadFile } from '../src/api/files.js';
 import ArticlesView from '../src/views/ArticlesView.vue';
 
 vi.mock('../src/api/articles.js', () => ({
@@ -20,6 +22,29 @@ vi.mock('../src/api/articles.js', () => ({
   updateArticle: vi.fn(),
   updateArticleStatus: vi.fn()
 }));
+
+vi.mock('../src/api/files.js', () => ({
+  uploadFile: vi.fn()
+}));
+
+async function mountWithArticleRoute(query = {}) {
+  const router = createRouter({
+    history: createMemoryHistory(),
+    routes: [{ path: '/admin/articles', component: ArticlesView }]
+  });
+  router.push({ path: '/admin/articles', query });
+  await router.isReady();
+
+  const wrapper = mount(ArticlesView, {
+    global: {
+      plugins: [router, ElementPlus]
+    }
+  });
+
+  await flushPromises();
+
+  return { router, wrapper };
+}
 
 describe('ArticlesView', () => {
   beforeEach(() => {
@@ -71,6 +96,11 @@ describe('ArticlesView', () => {
     });
     createArticle.mockResolvedValue({ code: 200, message: '操作成功', data: { id: 200 } });
     updateArticle.mockResolvedValue({ code: 200, message: '操作成功', data: { id: 101 } });
+    uploadFile.mockResolvedValue({
+      code: 200,
+      message: '上传成功',
+      url: 'http://minio.example.com/bucket/article-cover.png'
+    });
   });
 
   afterEach(() => {
@@ -78,13 +108,7 @@ describe('ArticlesView', () => {
   });
 
   it('renders the real article management page and fallback categories', async () => {
-    const wrapper = mount(ArticlesView, {
-      global: {
-        plugins: [ElementPlus]
-      }
-    });
-
-    await flushPromises();
+    const { wrapper } = await mountWithArticleRoute();
 
     expect(wrapper.text()).toContain('文章管理');
     expect(wrapper.text()).toContain('新增文章');
@@ -117,26 +141,25 @@ describe('ArticlesView', () => {
   });
 
   it('creates, views, and edits articles in admin dialogs', async () => {
-    const wrapper = mount(ArticlesView, {
-      global: {
-        plugins: [ElementPlus]
-      }
-    });
-
-    await flushPromises();
+    const { wrapper } = await mountWithArticleRoute();
 
     wrapper.vm.handleCreate();
     await flushPromises();
 
     expect(wrapper.vm.articleDialogVisible).toBe(true);
     expect(wrapper.vm.articleDialogTitle).toBe('新增文章');
+    expect(wrapper.find('.create-article-button.primary-action-button').exists()).toBe(true);
+
+    await wrapper.vm.uploadCover({ file: new File(['cover'], 'cover.png', { type: 'image/png' }) });
+
+    expect(uploadFile).toHaveBeenCalledWith(expect.any(File));
+    expect(wrapper.vm.articleForm.coverUrl).toBe('http://minio.example.com/bucket/article-cover.png');
 
     wrapper.vm.articleForm.articleTitle = '后台新增文章';
     wrapper.vm.articleForm.articleSlug = 'admin-created-article';
     wrapper.vm.articleForm.categoryId = 1;
     wrapper.vm.articleForm.articleStatus = 'DRAFT';
     wrapper.vm.articleForm.articleSummary = '摘要';
-    wrapper.vm.articleForm.coverUrl = '/cover.png';
     wrapper.vm.articleForm.articleContent = '正文内容';
     wrapper.vm.articleForm.topFlag = true;
     wrapper.vm.articleForm.allowComment = false;
@@ -149,7 +172,7 @@ describe('ArticlesView', () => {
       categoryId: 1,
       articleStatus: 'DRAFT',
       articleSummary: '摘要',
-      coverUrl: '/cover.png',
+      coverUrl: 'http://minio.example.com/bucket/article-cover.png',
       articleContent: '正文内容',
       topFlag: true,
       allowComment: false
@@ -179,5 +202,32 @@ describe('ArticlesView', () => {
       articleStatus: 'PRIVATE',
       articleContent: 'React 18 正文'
     }));
+  });
+
+  it('opens article view and edit actions from route query', async () => {
+    const { wrapper: viewWrapper } = await mountWithArticleRoute({ action: 'view', id: '101' });
+
+    expect(getArticle).toHaveBeenCalledWith('101');
+    expect(viewWrapper.vm.detailDialogVisible).toBe(true);
+
+    vi.clearAllMocks();
+    getArticle.mockResolvedValueOnce({
+      code: 200,
+      message: '操作成功',
+      data: {
+        id: 101,
+        articleTitle: 'Route Edit Article',
+        articleSlug: 'route-edit-article',
+        articleStatus: 'DRAFT',
+        articleContent: 'Route edit content'
+      }
+    });
+
+    const { wrapper: editWrapper } = await mountWithArticleRoute({ action: 'edit', id: '101' });
+
+    expect(getArticle).toHaveBeenCalledWith('101');
+    expect(editWrapper.vm.articleDialogVisible).toBe(true);
+    expect(editWrapper.vm.articleDialogTitle).toBe('编辑文章');
+    expect(editWrapper.vm.articleForm.articleTitle).toBe('Route Edit Article');
   });
 });

@@ -5,7 +5,9 @@
         <h1>{{ title }}</h1>
         <span>{{ description }}</span>
       </div>
-      <el-button v-if="canCreate" type="primary" @click="openCreate">{{ createText }}</el-button>
+      <el-button v-if="canCreate" class="primary-action-button" type="primary" :icon="Plus" @click="openCreate">
+        {{ createText }}
+      </el-button>
     </div>
 
     <div class="panel admin-list-panel">
@@ -129,6 +131,7 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Plus } from '@element-plus/icons-vue';
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { normalizePage, pick, rowId, statusType, unwrapData } from './pageData.js';

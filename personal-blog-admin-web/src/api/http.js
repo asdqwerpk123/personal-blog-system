@@ -12,7 +12,9 @@ const http = axios.create({
 http.interceptors.request.use((config) => {
   const token = getStoredToken();
   const isLoginRequest = config.url === '/admin/auth/login';
+  const isRegisterRequest = config.url === '/user/auth/register';
   const isAdminRequest = config.url?.startsWith('/admin/');
+  const isUserRequest = config.url?.startsWith('/user/');
 
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     if (typeof config.headers?.delete === 'function') {
@@ -23,7 +25,7 @@ http.interceptors.request.use((config) => {
     }
   }
 
-  if (token && isAdminRequest && !isLoginRequest) {
+  if (token && (isAdminRequest || isUserRequest) && !isLoginRequest && !isRegisterRequest) {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -38,7 +40,7 @@ http.interceptors.response.use(
       if (payload.code === 200) {
         return payload;
       }
-      handleUnauthorizedAdminResponse(response.config, payload.code);
+      handleUnauthorizedResponse(response.config, payload.code);
 
       return Promise.reject(new Error(toChineseBusinessMessage(payload.message || '请求失败')));
     }
@@ -49,7 +51,7 @@ http.interceptors.response.use(
     const status = error.response?.status;
 
     if (status === 401) {
-      handleUnauthorizedAdminResponse(error.config, status);
+      handleUnauthorizedResponse(error.config, status);
     }
 
     if (error?.message) {
@@ -60,18 +62,31 @@ http.interceptors.response.use(
   }
 );
 
-function handleUnauthorizedAdminResponse(config, code) {
+function handleUnauthorizedResponse(config, code) {
   const requestUrl = config?.url || '';
   const isLoginRequest = requestUrl === '/admin/auth/login';
+  const isRegisterRequest = requestUrl === '/user/auth/register';
   const isAdminRequest = requestUrl.startsWith('/admin/');
+  const isUserRequest = requestUrl.startsWith('/user/');
 
-  if (Number(code) === 401 && isAdminRequest && !isLoginRequest) {
+  if (Number(code) === 401 && (isAdminRequest || isUserRequest) && !isLoginRequest && !isRegisterRequest) {
     clearStoredAuth();
     ElMessage.error('登录已过期，请重新登录');
     if (window.location.pathname !== '/login') {
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      redirectToLogin(window.location.pathname);
     }
   }
+}
+
+function redirectToLogin(currentPath) {
+  const target = `/login?redirect=${encodeURIComponent(currentPath)}`;
+
+  if (window.navigator?.userAgent?.includes('jsdom')) {
+    window.history.pushState({}, '', target);
+    return;
+  }
+
+  window.location.href = target;
 }
 
 export default http;
