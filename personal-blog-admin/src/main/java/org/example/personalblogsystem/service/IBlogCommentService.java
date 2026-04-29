@@ -2,6 +2,8 @@ package org.example.personalblogsystem.service;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.example.personalblogsystem.dto.UserCommentCreateRequest;
+import org.example.personalblogsystem.dto.UserCommentResponse;
 import org.example.personalblogsystem.entity.BlogComment;
 
 import java.util.List;
@@ -15,4 +17,12 @@ public interface IBlogCommentService extends IService<BlogComment> {
     BlogComment updateCommentStatus(Long id, String status);
 
     boolean deleteComment(Long id);
+
+    Page<UserCommentResponse> pageUserComments(long current, long size, Long userId, String keyword, String status);
+
+    List<UserCommentResponse> listUserArticleComments(Long userId, Long articleId);
+
+    UserCommentResponse createUserComment(Long userId, UserCommentCreateRequest request);
+
+    boolean deleteUserComment(Long userId, Long id);
 }

@@ -23,7 +23,7 @@
       <article class="panel articles-panel">
         <div class="panel__header">
           <h2>最新文章</h2>
-          <el-button link type="primary">查看全部</el-button>
+          <el-button class="dashboard-view-all" link type="primary" @click="goToArticles">查看全部</el-button>
         </div>
 
         <el-table class="article-table" :data="latestArticles" table-layout="fixed">
@@ -47,10 +47,24 @@
             </template>
           </el-table-column>
           <el-table-column label="操作" width="110" align="right">
-            <template #default>
+            <template #default="{ row }">
               <div class="table-actions">
-                <el-button link :icon="View" aria-label="预览" />
-                <el-button link :icon="EditPen" aria-label="编辑" />
+                <el-button
+                  link
+                  class="dashboard-article-action dashboard-article-action--view"
+                  :disabled="!row.id"
+                  :icon="View"
+                  aria-label="查看文章"
+                  @click="goToArticleAction(row, 'view')"
+                />
+                <el-button
+                  link
+                  class="dashboard-article-action dashboard-article-action--edit"
+                  :disabled="!row.id"
+                  :icon="EditPen"
+                  aria-label="编辑文章"
+                  @click="goToArticleAction(row, 'edit')"
+                />
               </div>
             </template>
           </el-table-column>
@@ -107,9 +121,12 @@
 <script setup>
 import { ChatLineSquare, Clock, Connection, Document, EditPen, View } from '@element-plus/icons-vue';
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { getDashboardSummary } from '@/api/dashboard.js';
 import { unwrapData } from '@/views/admin/pageData.js';
+
+const router = useRouter();
 
 const statIconMap = {
   ChatLineSquare,
@@ -160,6 +177,7 @@ const dashboardStats = computed(() => [
 ]);
 
 const latestArticles = computed(() => (summary.value.latestArticles || []).map((article) => ({
+  id: article.id ?? article.articleId,
   title: article.articleTitle || article.title || '-',
   date: formatTime(article.updateTime || article.createTime || article.publishedTime),
   category: article.categoryName || (article.categoryId ? `分类 ${article.categoryId}` : '-'),
@@ -204,6 +222,24 @@ onMounted(async () => {
   };
   lastUpdatedAt.value = new Date().toISOString();
 });
+
+function goToArticles() {
+  return router.push('/admin/articles');
+}
+
+function goToArticleAction(row, action) {
+  if (!row?.id) {
+    return undefined;
+  }
+
+  return router.push({
+    path: '/admin/articles',
+    query: {
+      action,
+      id: row.id
+    }
+  });
+}
 
 function articleStatusLabel(status) {
   const value = String(status || '').toUpperCase();

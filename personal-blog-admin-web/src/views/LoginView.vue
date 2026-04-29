@@ -33,6 +33,11 @@
         <el-button class="login-button" type="primary" size="large" :loading="loading" @click="handleLogin">
           登录
         </el-button>
+
+        <p class="login-register-entry">
+          没有账号？
+          <a href="/register" @click.prevent="goRegister">立即注册</a>
+        </p>
       </el-form>
     </section>
   </main>
@@ -63,8 +68,23 @@ const rules = {
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
 };
 
+function roleHome(roleCode) {
+  return roleCode === 'USER' ? '/author/dashboard' : '/admin/dashboard';
+}
+
+function goRegister() {
+  return router.push('/register');
+}
+
+async function validateForm() {
+  if (!formRef.value) {
+    return Boolean(form.userName && form.password);
+  }
+  return formRef.value.validate().catch(() => false);
+}
+
 async function handleLogin() {
-  const valid = await formRef.value?.validate().catch(() => false);
+  const valid = await validateForm();
 
   if (!valid) {
     return;
@@ -75,7 +95,8 @@ async function handleLogin() {
   try {
     await authStore.login(form);
     ElMessage.success('登录成功');
-    router.replace(route.query.redirect || '/admin/dashboard');
+    const target = typeof route.query.redirect === 'string' ? route.query.redirect : roleHome(authStore.roleCode);
+    await router.replace(target.startsWith('/admin') && authStore.roleCode === 'USER' ? '/author/dashboard' : target);
   } catch (error) {
     ElMessage.error(error.message || '登录失败，请检查用户名和密码');
   } finally {

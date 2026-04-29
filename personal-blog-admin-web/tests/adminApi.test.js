@@ -13,6 +13,7 @@ import {
 import { createCategory, deleteCategory, getCategory, getCategoryList, getCategoryPage, updateCategory } from '../src/api/categories.js';
 import { deleteComment, getArticleComments, getCommentPage, updateCommentStatus } from '../src/api/comments.js';
 import { getDashboardSummary } from '../src/api/dashboard.js';
+import { uploadFile } from '../src/api/files.js';
 import { createFriendLink, deleteFriendLink, getFriendLinkPage, updateFriendLink } from '../src/api/friendLinks.js';
 import { getOperationLogPage } from '../src/api/operationLogs.js';
 import { getMyProfile, updateMyPassword, updateMyProfile, uploadAvatar } from '../src/api/profile.js';
@@ -74,7 +75,15 @@ describe('admin API modules', () => {
       oldPassword: '123456',
       newPassword: '654321'
     });
-    expect(http.post).toHaveBeenCalledWith('/admin/files/avatar', expect.any(FormData));
+    expect(http.post).toHaveBeenCalledWith('/admin/files/upload', expect.any(FormData));
+  });
+
+  it('wraps the unified file upload endpoint', () => {
+    const file = new File(['cover'], 'cover.png', { type: 'image/png' });
+
+    uploadFile(file);
+
+    expect(http.post).toHaveBeenCalledWith('/admin/files/upload', expect.any(FormData));
   });
 
   it('wraps content, taxonomy, moderation, friend-link, and log endpoints', () => {

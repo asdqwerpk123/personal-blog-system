@@ -82,6 +82,7 @@ describe('CategoriesView', () => {
 
     expect(wrapper.text()).toContain('分类管理');
     expect(wrapper.text()).toContain('新增分类');
+    expect(wrapper.find('.create-category-button.primary-action-button').exists()).toBe(true);
     expect(wrapper.text()).toContain('序号');
     expect(wrapper.text()).not.toContain('分类ID');
     expect(wrapper.text()).toContain('前端开发');

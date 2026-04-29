@@ -59,6 +59,31 @@ public class AvatarStorageService {
         return new FileUploadResponse(url);
     }
 
+    public FileUploadResponse storeUserAvatar(MultipartFile file, Long operatorUserId) {
+        validateFile(file);
+
+        String extension = ALLOWED_IMAGE_EXTENSIONS.get(normalizeContentType(file.getContentType()));
+        String fileName = UUID.randomUUID() + extension;
+        Path uploadDir = Path.of(uploadProperties.getAvatarDir()).toAbsolutePath().normalize();
+        Path target = uploadDir.resolve(fileName).normalize();
+
+        try {
+            Files.createDirectories(uploadDir);
+            file.transferTo(target);
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("图片上传失败，请稍后重试");
+        }
+
+        String url = "/uploads/avatars/" + fileName;
+        operationLogRecordService.recordSuccess(
+                operatorUserId,
+                "USER_PROFILE",
+                operatorUserId,
+                "UPLOAD_AVATAR",
+                "上传头像: " + url);
+        return new FileUploadResponse(url);
+    }
+
     private void validateFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("请选择图片文件");

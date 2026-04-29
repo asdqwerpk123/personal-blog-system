@@ -15,3 +15,22 @@ export function updateCommentStatus(id, status) {
 export function deleteComment(id) {
   return http.delete(`/admin/comment/${id}`);
 }
+
+export function getAuthorCommentPage(params = {}) {
+  return http.get('/user/comments/page', {
+    params: {
+      current: params.current ?? params.page ?? 1,
+      size: params.size ?? params.pageSize ?? 10,
+      keyword: params.keyword,
+      status: params.status
+    }
+  });
+}
+
+export function createAuthorComment(data) {
+  return http.post('/user/comments', data);
+}
+
+export function deleteAuthorComment(id) {
+  return http.delete(`/user/comments/${id}`);
+}

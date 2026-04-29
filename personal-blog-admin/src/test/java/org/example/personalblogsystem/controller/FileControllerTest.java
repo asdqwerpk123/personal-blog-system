@@ -1,0 +1,90 @@
+package org.example.personalblogsystem.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.example.personalblogsystem.PersonalBlogSystemApplication;
+import org.example.personalblogsystem.dto.LoginRequest;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.context.WebApplicationContext;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@SpringBootTest(classes = PersonalBlogSystemApplication.class,
+        properties = {
+                "spring.profiles.active=test",
+                "minio.enabled=true",
+                "minio.endpoint=http://localhost:9000",
+                "minio.access-key=minioadmin",
+                "minio.secret-key=minioadmin",
+                "minio.bucket-name=personal-blog"
+        })
+class FileControllerTest {
+
+    @Autowired
+    private WebApplicationContext webApplicationContext;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private MockMvc mockMvc;
+
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+    }
+
+    @Test
+    void shouldRejectAnonymousUpload() throws Exception {
+        mockMvc.perform(multipart("/admin/files/upload").file(uploadFile()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
+    void shouldRejectUserRoleUpload() throws Exception {
+        String token = loginAndGetAccessToken("jerry", "123456");
+
+        mockMvc.perform(multipart("/admin/files/upload")
+                        .file(uploadFile())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    private MockMultipartFile uploadFile() {
+        return new MockMultipartFile(
+                "file",
+                "cover.png",
+                "image/png",
+                new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+    }
+
+    private String loginAndGetAccessToken(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/admin/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data")
+                .path("accessToken")
+                .asText();
+    }
+
+    private LoginRequest loginRequest(String userName, String password) {
+        LoginRequest request = new LoginRequest();
+        request.setUserName(userName);
+        request.setPassword(password);
+        return request;
+    }
+}

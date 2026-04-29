@@ -5,7 +5,7 @@
         <h1>友链管理</h1>
         <span>维护友情链接申请、Logo 和审核状态</span>
       </div>
-      <el-button type="primary" @click="openCreateDialog">新增友链</el-button>
+      <el-button class="primary-action-button" type="primary" :icon="Plus" @click="openCreateDialog">新增友链</el-button>
     </div>
 
     <div class="panel admin-list-panel">
@@ -150,6 +150,7 @@
 
 <script setup>
 import { ElMessage, ElMessageBox } from 'element-plus';
+import { Plus } from '@element-plus/icons-vue';
 import { onMounted, reactive, ref } from 'vue';
 
 import {
@@ -341,7 +342,8 @@ async function uploadLogo(options) {
   try {
     const response = await uploadFriendLinkLogo(file);
     const data = response?.data ?? response ?? {};
-    form.siteLogo = data.url || '';
+    const url = response?.url || data?.url || '';
+    form.siteLogo = url;
     logoPreviewBroken.value = false;
     ElMessage.success('Logo 上传成功');
   } catch (error) {

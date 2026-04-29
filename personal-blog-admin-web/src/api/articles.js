@@ -76,3 +76,53 @@ export function updateArticleTags(id, tagIds, config = {}) {
     ? http.put(`/admin/article/${id}/tags`, { tagIds }, config)
     : http.put(`/admin/article/${id}/tags`, { tagIds });
 }
+
+export function getAuthorArticlePage(filters = {}, config = {}) {
+  return http.get('/user/articles/page', {
+    ...config,
+    params: compactParams({
+      current: filters.current ?? filters.page ?? 1,
+      size: filters.size ?? filters.pageSize ?? 10,
+      title: filters.title?.trim?.() ?? filters.title,
+      categoryId: filters.categoryId,
+      status: filters.status
+    })
+  });
+}
+
+export function getAuthorArticle(id, config = {}) {
+  return hasConfig(config) ? http.get(`/user/articles/${id}`, config) : http.get(`/user/articles/${id}`);
+}
+
+export function createAuthorArticle(data, config = {}) {
+  return hasConfig(config) ? http.post('/user/articles', data, config) : http.post('/user/articles', data);
+}
+
+export function updateAuthorArticle(id, data, config = {}) {
+  return hasConfig(config) ? http.put(`/user/articles/${id}`, data, config) : http.put(`/user/articles/${id}`, data);
+}
+
+export function updateAuthorArticleStatus(id, status, config = {}) {
+  return http.put(`/user/articles/${id}/status`, null, {
+    ...config,
+    params: { status }
+  });
+}
+
+export function deleteAuthorArticle(id, config = {}) {
+  return hasConfig(config) ? http.delete(`/user/articles/${id}`, config) : http.delete(`/user/articles/${id}`);
+}
+
+export function getAuthorArticleComments(id, config = {}) {
+  return hasConfig(config)
+    ? http.get(`/user/articles/${id}/comments`, config)
+    : http.get(`/user/articles/${id}/comments`);
+}
+
+export function getAuthorCategories(config = {}) {
+  return hasConfig(config) ? http.get('/user/categories/list', config) : http.get('/user/categories/list');
+}
+
+export function getAuthorTags(config = {}) {
+  return hasConfig(config) ? http.get('/user/tags/list', config) : http.get('/user/tags/list');
+}

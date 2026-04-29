@@ -33,10 +33,6 @@
     <section class="admin-main">
       <header class="admin-topbar">
         <div class="topbar-actions">
-          <button class="icon-button" type="button" aria-label="通知">
-            <Bell />
-            <span class="notice-dot"></span>
-          </button>
           <el-dropdown trigger="click" @command="handleProfileCommand">
             <button class="profile profile--button" type="button" aria-label="用户菜单">
               <span class="profile__avatar">
@@ -67,7 +63,6 @@
 <script setup>
 import {
   ArrowDown,
-  Bell,
   ChatLineSquare,
   Connection,
   Document,

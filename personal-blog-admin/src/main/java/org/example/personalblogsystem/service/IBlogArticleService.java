@@ -3,6 +3,9 @@ package org.example.personalblogsystem.service;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.example.personalblogsystem.entity.BlogArticle;
 import com.baomidou.mybatisplus.extension.service.IService;
+import org.example.personalblogsystem.dto.UserArticleRequest;
+import org.example.personalblogsystem.dto.UserArticleResponse;
+import org.example.personalblogsystem.dto.UserDashboardSummaryResponse;
 
 /**
  * <p>
@@ -23,5 +26,24 @@ public interface IBlogArticleService extends IService<BlogArticle> {
     BlogArticle updateArticleStatus(Long id, String status);
 
     boolean deleteArticle(Long id);
+
+    Page<UserArticleResponse> pageUserArticles(long current,
+                                               long size,
+                                               Long authorId,
+                                               String title,
+                                               Long categoryId,
+                                               String status);
+
+    UserArticleResponse getUserArticle(Long authorId, Long id);
+
+    UserArticleResponse createUserArticle(Long authorId, UserArticleRequest request);
+
+    UserArticleResponse updateUserArticle(Long authorId, Long id, UserArticleRequest request);
+
+    UserArticleResponse updateUserArticleStatus(Long authorId, Long id, String status);
+
+    boolean deleteUserArticle(Long authorId, Long id);
+
+    UserDashboardSummaryResponse getUserDashboardSummary(Long authorId);
 
 }

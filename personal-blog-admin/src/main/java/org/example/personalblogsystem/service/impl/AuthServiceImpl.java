@@ -7,8 +7,11 @@ import org.example.personalblogsystem.auth.JwtTokenService;
 import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.dto.LoginUserQueryRow;
 import org.example.personalblogsystem.dto.LoginUserResponse;
+import org.example.personalblogsystem.dto.SysUserResponse;
+import org.example.personalblogsystem.dto.UserRegisterRequest;
 import org.example.personalblogsystem.mapper.SysUserMapper;
 import org.example.personalblogsystem.service.IAuthService;
+import org.example.personalblogsystem.service.ISysUserService;
 import org.example.personalblogsystem.service.OperationLogRecordService;
 import org.example.personalblogsystem.service.PasswordHashService;
 import org.springframework.stereotype.Service;
@@ -23,15 +26,18 @@ public class AuthServiceImpl implements IAuthService {
     private final JwtTokenService jwtTokenService;
     private final PasswordHashService passwordHashService;
     private final OperationLogRecordService operationLogRecordService;
+    private final ISysUserService sysUserService;
 
     public AuthServiceImpl(SysUserMapper sysUserMapper,
                            JwtTokenService jwtTokenService,
                            PasswordHashService passwordHashService,
-                           OperationLogRecordService operationLogRecordService) {
+                           OperationLogRecordService operationLogRecordService,
+                           ISysUserService sysUserService) {
         this.sysUserMapper = sysUserMapper;
         this.jwtTokenService = jwtTokenService;
         this.passwordHashService = passwordHashService;
         this.operationLogRecordService = operationLogRecordService;
+        this.sysUserService = sysUserService;
     }
 
     @Override
@@ -41,21 +47,26 @@ public class AuthServiceImpl implements IAuthService {
         String userName = request.getUserName().trim();
         LoginUserQueryRow row = sysUserMapper.selectLoginUserByUserName(userName);
         if (row == null) {
-            operationLogRecordService.recordFailure(null, "AUTH", null, "LOGIN_FAILURE", "登录失败：" + userName);
-            throw new IllegalArgumentException("username or password is incorrect");
+            operationLogRecordService.recordFailure(null, "AUTH", null, "LOGIN_FAILURE", "登录失败: " + userName);
+            throw new IllegalArgumentException("用户名或密码错误");
         }
         if (!isEnabled(row.getUserStatus()) || !passwordHashService.matches(request.getPassword(), row.getPasswordHash())) {
-            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败：" + row.getUserName());
-            throw new IllegalArgumentException("username or password is incorrect");
+            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败: " + row.getUserName());
+            throw new IllegalArgumentException("用户名或密码错误");
         }
-        if (!isAdminRole(row.getRoleCode())) {
-            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败：无后台权限 " + row.getUserName());
+        if (!isSupportedRole(row.getRoleCode())) {
+            operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败: 无效角色 " + row.getUserName());
             throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
         }
 
         LoginUserResponse response = toResponse(row);
-        operationLogRecordService.recordSuccess(row.getId(), "AUTH", row.getId(), "LOGIN_SUCCESS", "登录成功：" + row.getUserName());
+        operationLogRecordService.recordSuccess(row.getId(), "AUTH", row.getId(), "LOGIN_SUCCESS", "登录成功: " + row.getUserName());
         return response;
+    }
+
+    @Override
+    public SysUserResponse register(UserRegisterRequest request) {
+        return sysUserService.registerUser(request);
     }
 
     private void validateRequest(LoginRequest request) {
@@ -71,8 +82,10 @@ public class AuthServiceImpl implements IAuthService {
         return "ENABLED".equalsIgnoreCase(userStatus == null ? null : userStatus.trim());
     }
 
-    private boolean isAdminRole(String roleCode) {
-        return "SUPER_ADMIN".equalsIgnoreCase(roleCode) || "ADMIN".equalsIgnoreCase(roleCode);
+    private boolean isSupportedRole(String roleCode) {
+        return "SUPER_ADMIN".equalsIgnoreCase(roleCode)
+                || "ADMIN".equalsIgnoreCase(roleCode)
+                || "USER".equalsIgnoreCase(roleCode);
     }
 
     private LoginUserResponse toResponse(LoginUserQueryRow row) {

@@ -12,6 +12,7 @@ import org.example.personalblogsystem.dto.SysUserPasswordResetRequest;
 import org.example.personalblogsystem.dto.SysUserResponse;
 import org.example.personalblogsystem.dto.SysUserStatusRequest;
 import org.example.personalblogsystem.dto.SysUserUpdateRequest;
+import org.example.personalblogsystem.dto.UserRegisterRequest;
 import org.example.personalblogsystem.entity.SysRole;
 import org.example.personalblogsystem.entity.SysUser;
 import org.example.personalblogsystem.mapper.SysUserMapper;
@@ -27,22 +28,21 @@ import org.springframework.util.StringUtils;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.Locale;
 import java.util.stream.Collectors;
 
-/**
- * <p>
- * 鐢ㄦ埛琛?鏈嶅姟瀹炵幇绫?
- * </p>
- *
- * @author student
- * @since 2026-03-31
- */
 @Service
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
+
+    private static final int REGISTER_USER_NAME_MIN_LENGTH = 3;
+    private static final int REGISTER_USER_NAME_MAX_LENGTH = 20;
+    private static final int PASSWORD_MIN_LENGTH = 6;
+    private static final int PASSWORD_MAX_LENGTH = 20;
+    private static final String GENERATED_EMAIL_PREFIX = "__register__";
+    private static final String GENERATED_EMAIL_DOMAIN = "local.invalid";
 
     private final ISysRoleService sysRoleService;
     private final PasswordHashService passwordHashService;
@@ -107,19 +107,55 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         assertUniqueEmail(email, null);
         assertUniquePhone(phone, null);
 
-        SysUser user = new SysUser();
-        user.setUserName(userName);
-        user.setPasswordHash(passwordHashService.hash(password));
-        user.setNickName(nickName);
-        user.setEmail(email);
-        user.setPhone(phone);
-        user.setAvatarUrl(trimToNull(request.getAvatarUrl()));
-        user.setIntroduction(trimToNull(request.getIntroduction()));
-        user.setRoleId(roleId);
-        user.setUserStatus(userStatus);
+        SysUser user = buildUser(
+                userName,
+                password,
+                nickName,
+                email,
+                phone,
+                request.getAvatarUrl(),
+                request.getIntroduction(),
+                roleId,
+                userStatus);
         save(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "CREATE_USER", "新增用户：" + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "CREATE_USER", "create user: " + user.getUserName());
         return toResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public SysUserResponse registerUser(UserRegisterRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("register request must not be null");
+        }
+
+        String userName = requireText(request.getUserName(), "用户名不能为空");
+        validateLength(userName, REGISTER_USER_NAME_MIN_LENGTH, REGISTER_USER_NAME_MAX_LENGTH,
+                "用户名长度必须为 3-20 位");
+        String password = requireText(request.getPassword(), "密码不能为空");
+        validateLength(password, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
+                "密码长度必须为 6-20 位");
+        String nickName = requireText(request.getNickName(), "昵称不能为空");
+        String email = normalizeRegisterEmail(request.getEmail(), userName);
+        String phone = trimToNull(request.getPhone());
+        SysRole role = requireRoleByCode("USER");
+        assertUniqueRegisterUserName(userName);
+        assertUniqueRegisterEmail(email);
+        assertUniqueRegisterPhoneIfPresent(phone);
+
+        SysUser user = buildUser(
+                userName,
+                password,
+                nickName,
+                email,
+                phone,
+                request.getAvatarUrl(),
+                request.getIntroduction(),
+                role.getId(),
+                AdminPermissionService.USER_STATUS_ENABLED);
+        save(user);
+        operationLogRecordService.recordSuccess((Long) null, "AUTH", user.getId(), "REGISTER_USER", "用户注册: " + user.getUserName());
+        return toResponse(user, role);
     }
 
     @Override
@@ -145,7 +181,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         user.setIntroduction(trimToNull(request.getIntroduction()));
         user.setRoleId(roleId);
         updateById(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "UPDATE_USER", "编辑用户：" + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "UPDATE_USER", "update user: " + user.getUserName());
         return toResponse(user);
     }
 
@@ -159,7 +195,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         adminPermissionService.requireCanUpdateStatus(current, user, role);
         user.setUserStatus(userStatus);
         updateById(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "CHANGE_USER_STATUS", "禁用/启用用户：" + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "CHANGE_USER_STATUS", "change user status: " + user.getUserName());
         return toResponse(user);
     }
 
@@ -173,7 +209,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         adminPermissionService.requireCanResetPassword(current, user, role);
         user.setPasswordHash(passwordHashService.hash(newPassword));
         updateById(user);
-        operationLogRecordService.recordSuccess("USER", user.getId(), "RESET_USER_PASSWORD", "重置用户密码：" + user.getUserName());
+        operationLogRecordService.recordSuccess("USER", user.getId(), "RESET_USER_PASSWORD", "reset user password: " + user.getUserName());
         return toResponse(user);
     }
 
@@ -204,7 +240,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         user.setAvatarUrl(trimToNull(request.getAvatarUrl()));
         user.setIntroduction(trimToNull(request.getIntroduction()));
         updateById(user);
-        operationLogRecordService.recordSuccess("USER_PROFILE", user.getId(), "UPDATE_PROFILE", "修改个人资料：" + user.getUserName());
+        operationLogRecordService.recordSuccess("USER_PROFILE", user.getId(), "UPDATE_PROFILE", "update profile: " + user.getUserName());
         return toResponse(user);
     }
 
@@ -228,7 +264,68 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         user.setPasswordHash(passwordHashService.hash(newPassword));
         updateById(user);
-        operationLogRecordService.recordSuccess("USER_PROFILE", user.getId(), "CHANGE_OWN_PASSWORD", "修改自己密码：" + user.getUserName());
+        operationLogRecordService.recordSuccess("USER_PROFILE", user.getId(), "CHANGE_OWN_PASSWORD", "change own password: " + user.getUserName());
+    }
+
+    @Override
+    @Transactional
+    public SysUserResponse getUserProfile(Long userId) {
+        return toResponse(requireExistingUser(userId));
+    }
+
+    @Override
+    @Transactional
+    public SysUserResponse updateUserProfile(Long userId, AdminProfileUpdateRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("资料不能为空");
+        }
+
+        SysUser user = requireExistingUser(userId);
+        String nickName = requireText(request.getNickName(), "昵称不能为空");
+        String email = normalizeProfileEmail(request.getEmail(), user.getUserName());
+        String phone = trimToNull(request.getPhone());
+        assertUniqueEmail(email, user.getId());
+        assertUniquePhoneIfPresent(phone, user.getId());
+
+        user.setNickName(nickName);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setIntroduction(trimToNull(request.getIntroduction()));
+        updateById(user);
+        operationLogRecordService.recordSuccess(userId, "USER_PROFILE", userId, "UPDATE_PROFILE",
+                "修改个人资料: " + user.getUserName());
+        return toResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public SysUserResponse updateUserAvatar(Long userId, String avatarUrl) {
+        SysUser user = requireExistingUser(userId);
+        user.setAvatarUrl(trimToNull(avatarUrl));
+        updateById(user);
+        return toResponse(user);
+    }
+
+    @Override
+    @Transactional
+    public void changeUserPassword(Long userId, AdminPasswordChangeRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("密码参数不能为空");
+        }
+
+        SysUser user = requireExistingUser(userId);
+        String oldPassword = requireText(request.getOldPassword(), "当前密码不能为空");
+        String newPassword = requireText(request.getNewPassword(), "新密码不能为空");
+        validateLength(newPassword, PASSWORD_MIN_LENGTH, PASSWORD_MAX_LENGTH,
+                "新密码长度必须为 6-20 位");
+        if (!passwordHashService.matches(oldPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("当前密码错误");
+        }
+
+        user.setPasswordHash(passwordHashService.hash(newPassword));
+        updateById(user);
+        operationLogRecordService.recordSuccess(userId, "USER_PROFILE", userId, "CHANGE_OWN_PASSWORD",
+                "修改密码: " + user.getUserName());
     }
 
     private SysUser requireExistingUser(Long id) {
@@ -250,6 +347,16 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         return role;
     }
 
+    private SysRole requireRoleByCode(String roleCode) {
+        SysRole role = sysRoleService.lambdaQuery()
+                .eq(SysRole::getRoleCode, roleCode)
+                .one();
+        if (role == null || !StringUtils.hasText(role.getRoleCode())) {
+            throw new IllegalArgumentException("roleId is invalid");
+        }
+        return role;
+    }
+
     private Long requireRoleId(Long roleId) {
         if (roleId == null) {
             throw new IllegalArgumentException("roleId must not be blank");
@@ -262,6 +369,13 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new IllegalArgumentException(message);
         }
         return value.trim();
+    }
+
+    private void validateLength(String value, int min, int max, String message) {
+        int length = value.length();
+        if (length < min || length > max) {
+            throw new IllegalArgumentException(message);
+        }
     }
 
     private String normalizeCreateStatus(String userStatus) {
@@ -285,6 +399,51 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             return null;
         }
         return value.trim();
+    }
+
+    private String normalizeRegisterEmail(String value, String userName) {
+        String email = trimToNull(value);
+        if (email != null) {
+            return email;
+        }
+        return GENERATED_EMAIL_PREFIX + userName + "@" + GENERATED_EMAIL_DOMAIN;
+    }
+
+    private String normalizeProfileEmail(String value, String userName) {
+        String email = trimToNull(value);
+        if (email != null) {
+            return email;
+        }
+        return GENERATED_EMAIL_PREFIX + userName + "@" + GENERATED_EMAIL_DOMAIN;
+    }
+
+    private String normalizeEmailForResponse(String email) {
+        if (email != null && email.startsWith(GENERATED_EMAIL_PREFIX) && email.endsWith("@" + GENERATED_EMAIL_DOMAIN)) {
+            return null;
+        }
+        return email;
+    }
+
+    private SysUser buildUser(String userName,
+                              String password,
+                              String nickName,
+                              String email,
+                              String phone,
+                              String avatarUrl,
+                              String introduction,
+                              Long roleId,
+                              String userStatus) {
+        SysUser user = new SysUser();
+        user.setUserName(userName);
+        user.setPasswordHash(passwordHashService.hash(password));
+        user.setNickName(nickName);
+        user.setEmail(email);
+        user.setPhone(phone);
+        user.setAvatarUrl(trimToNull(avatarUrl));
+        user.setIntroduction(trimToNull(introduction));
+        user.setRoleId(roleId);
+        user.setUserStatus(userStatus);
+        return user;
     }
 
     private void assertUniqueUserName(String userName, Long excludeId) {
@@ -323,6 +482,24 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
     }
 
+    private void assertUniqueRegisterUserName(String userName) {
+        if (lambdaQuery().eq(SysUser::getUserName, userName).count() > 0) {
+            throw new IllegalArgumentException("用户名已存在");
+        }
+    }
+
+    private void assertUniqueRegisterEmail(String email) {
+        if (lambdaQuery().eq(SysUser::getEmail, email).count() > 0) {
+            throw new IllegalArgumentException("邮箱已存在");
+        }
+    }
+
+    private void assertUniqueRegisterPhoneIfPresent(String phone) {
+        if (StringUtils.hasText(phone) && lambdaQuery().eq(SysUser::getPhone, phone).count() > 0) {
+            throw new IllegalArgumentException("手机号已存在");
+        }
+    }
+
     private SysUserResponse toResponse(SysUser user) {
         return toResponse(user, requireRole(user.getRoleId()));
     }
@@ -332,7 +509,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         response.setId(user.getId());
         response.setUserName(user.getUserName());
         response.setNickName(user.getNickName());
-        response.setEmail(user.getEmail());
+        response.setEmail(normalizeEmailForResponse(user.getEmail()));
         response.setPhone(user.getPhone());
         response.setAvatarUrl(user.getAvatarUrl());
         response.setIntroduction(user.getIntroduction());

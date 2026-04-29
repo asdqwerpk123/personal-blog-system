@@ -2,7 +2,7 @@
   <section class="category-management">
     <div class="category-page-header">
       <h1>分类管理</h1>
-      <el-button class="create-category-button" type="primary" :icon="Plus" @click="openCreateDialog">
+      <el-button class="create-category-button primary-action-button" type="primary" :icon="Plus" @click="openCreateDialog">
         新增分类
       </el-button>
     </div>
@@ -413,13 +413,15 @@ defineExpose({
   min-width: 118px;
   min-height: 40px;
   border: 0;
-  border-radius: 6px;
+  border-radius: 7px;
+  color: #ffffff;
   background: var(--color-primary);
-  box-shadow: 0 8px 18px rgba(54, 87, 245, 0.24);
+  box-shadow: 0 8px 18px rgba(54, 87, 245, 0.22);
 }
 
 .create-category-button:hover,
 .create-category-button:focus {
+  color: #ffffff;
   background: var(--color-primary-hover);
 }
 

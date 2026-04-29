@@ -15,7 +15,7 @@ describe('http client authorization', () => {
     sessionStorage.clear();
   });
 
-  it('adds Authorization only for admin API requests', async () => {
+  it('adds Authorization for authenticated admin and user API requests only', async () => {
     persistAuth({
       token: 'admin-token',
       userName: 'admin',
@@ -37,13 +37,15 @@ describe('http client authorization', () => {
     };
 
     await http.get('/admin/article/1', { adapter });
+    await http.get('/user/articles/page', { adapter });
     await http.get('/public/ping', { adapter });
 
     expect(capturedConfigs[0].headers.Authorization).toBe('Bearer admin-token');
-    expect(capturedConfigs[1].headers.Authorization).toBeUndefined();
+    expect(capturedConfigs[1].headers.Authorization).toBe('Bearer admin-token');
+    expect(capturedConfigs[2].headers.Authorization).toBeUndefined();
   });
 
-  it('does not handle login 401 responses as expired sessions', async () => {
+  it('does not handle login or register 401 responses as expired sessions', async () => {
     persistAuth({
       token: 'existing-token',
       userName: 'admin',
@@ -64,12 +66,19 @@ describe('http client authorization', () => {
           status: 401
         }
       });
+    await expect(http.post('/user/auth/register', { userName: 'writer' }, { adapter }))
+      .rejects
+      .toMatchObject({
+        response: {
+          status: 401
+        }
+      });
 
     expect(getStoredAuth().token).toBe('existing-token');
   });
 
-  it('clears stored auth when wrapped admin responses are unauthorized', async () => {
-    window.history.pushState({}, '', '/login');
+  it('clears stored auth when wrapped admin or user responses are unauthorized', async () => {
+    window.history.pushState({}, '', '/author/articles');
     persistAuth({
       token: 'expired-token',
       userName: 'admin',
@@ -80,7 +89,7 @@ describe('http client authorization', () => {
       config,
       data: {
         code: 401,
-        message: '未授权'
+        message: 'unauthorized'
       },
       headers: {},
       request: {},
@@ -88,7 +97,7 @@ describe('http client authorization', () => {
       statusText: 'OK'
     });
 
-    await expect(http.get('/admin/article/1', { adapter }))
+    await expect(http.get('/user/articles/page', { adapter }))
       .rejects
       .toThrow('未登录或登录已过期');
 

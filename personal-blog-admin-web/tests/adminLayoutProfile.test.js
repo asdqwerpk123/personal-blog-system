@@ -48,6 +48,7 @@ describe('AdminLayout profile menu', () => {
     await nextTick();
 
     expect(wrapper.find('.topbar-search').exists()).toBe(false);
+    expect(wrapper.find('.icon-button').exists()).toBe(false);
     expect(wrapper.text()).toContain('Root');
     expect(wrapper.find('.profile__avatar-img').attributes('src')).toBe('/uploads/avatars/root.png');
 

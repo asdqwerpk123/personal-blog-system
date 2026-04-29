@@ -1,9 +1,20 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import ElementPlus from 'element-plus';
 import { describe, expect, it, vi } from 'vitest';
+import { createMemoryHistory, createRouter } from 'vue-router';
 
 import { getDashboardSummary } from '../src/api/dashboard.js';
 import DashboardView from '../src/views/DashboardView.vue';
+
+function createTestRouter() {
+  return createRouter({
+    history: createMemoryHistory(),
+    routes: [
+      { path: '/admin/dashboard', component: DashboardView },
+      { path: '/admin/articles', component: { template: '<div>articles</div>' } }
+    ]
+  });
+}
 
 vi.mock('../src/api/dashboard.js', () => ({
   getDashboardSummary: vi.fn(() => Promise.resolve({
@@ -51,9 +62,13 @@ vi.mock('../src/api/dashboard.js', () => ({
 
 describe('DashboardView', () => {
   it('loads and renders dashboard summary from the admin API', async () => {
+    const router = createTestRouter();
+    router.push('/admin/dashboard');
+    await router.isReady();
+
     const wrapper = mount(DashboardView, {
       global: {
-        plugins: [ElementPlus]
+        plugins: [router, ElementPlus]
       }
     });
 
@@ -64,5 +79,37 @@ describe('DashboardView', () => {
     expect(wrapper.text()).toContain('Real API Article');
     expect(wrapper.text()).toContain('Needs review');
     expect(wrapper.text()).toContain('Update tag success');
+  });
+
+  it('navigates latest article actions to matching article management actions', async () => {
+    const router = createTestRouter();
+    router.push('/admin/dashboard');
+    await router.isReady();
+
+    const wrapper = mount(DashboardView, {
+      global: {
+        plugins: [router, ElementPlus]
+      }
+    });
+
+    await vi.dynamicImportSettled();
+
+    await wrapper.find('.dashboard-view-all').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe('/admin/articles');
+
+    router.push('/admin/dashboard');
+    await router.isReady();
+
+    await wrapper.find('.dashboard-article-action--view').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe('/admin/articles?action=view&id=7');
+
+    router.push('/admin/dashboard');
+    await router.isReady();
+
+    await wrapper.find('.dashboard-article-action--edit').trigger('click');
+    await flushPromises();
+    expect(router.currentRoute.value.fullPath).toBe('/admin/articles?action=edit&id=7');
   });
 });
