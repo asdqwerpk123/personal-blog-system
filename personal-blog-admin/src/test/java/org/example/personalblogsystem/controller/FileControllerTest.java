@@ -60,6 +60,18 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.code").value(401));
     }
 
+    @Test
+    void shouldRejectUnsafeMinioUploadTypeBeforeCallingMinio() throws Exception {
+        String token = loginAndGetAccessToken("root", "123456");
+
+        mockMvc.perform(multipart("/admin/files/upload")
+                        .file(new MockMultipartFile("file", "payload.html", "text/html", "<script></script>".getBytes()))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("不支持的图片格式"));
+    }
+
     private MockMultipartFile uploadFile() {
         return new MockMultipartFile(
                 "file",

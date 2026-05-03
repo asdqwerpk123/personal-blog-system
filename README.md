@@ -260,7 +260,36 @@ org.example.personalblogsystem.PersonalBlogSystemApplication
 
 项目默认启动端口为 `8081`。如果后续需要临时切换端口，可通过环境变量 `BLOG_SERVER_PORT` 覆盖。
 
-### 6. 运行测试
+### 6. 启动前端
+
+第一次进入前端模块时安装依赖：
+
+```powershell
+npm --prefix .\personal-blog-admin-web install
+```
+
+开发联调启动：
+
+```powershell
+npm --prefix .\personal-blog-admin-web run dev
+```
+
+前端默认开发端口由 Vite 分配，通常为 `5173`。启动后在浏览器访问 Vite 输出的本地地址。
+
+### 7. 默认演示账号
+
+初始化 SQL 默认提供以下课程设计演示账号：
+
+```text
+SUPER_ADMIN: root / 123456
+ADMIN: admin_zhang / 123456
+USER: tom / 123456
+USER: jerry / 123456
+```
+
+其中 `SUPER_ADMIN` 和 `ADMIN` 用于后台管理端，`USER` 用于作者中心。
+
+### 8. 运行测试
 
 第一次准备测试环境：
 
@@ -280,6 +309,18 @@ org.example.personalblogsystem.PersonalBlogSystemApplication
 
 ```bash
 ./mvnw.cmd clean package
+```
+
+运行前端测试：
+
+```powershell
+npm --prefix .\personal-blog-admin-web run test
+```
+
+构建前端生产包：
+
+```powershell
+npm --prefix .\personal-blog-admin-web run build
 ```
 
 ## 数据库设计说明
@@ -397,6 +438,20 @@ password: admin123
 - P2 补齐友情链接、操作日志自动记录、真实仪表盘、登录接口
 - 当前管理端已经补齐 Bearer JWT 登录、`/admin/**` 默认鉴权和服务端身份绑定
 - 当前后台前端已经联调用户、文章、分类、标签、评论、友情链接、操作日志、角色字典和仪表盘页面
+
+## 课程设计演示流程
+
+建议按下面顺序演示：
+
+1. 使用 `root / 123456` 登录后台。
+2. 查看仪表盘统计和最新操作日志。
+3. 演示用户管理、角色分配、状态修改和密码重置。
+4. 演示文章新增、编辑、状态修改、分类和标签维护。
+5. 演示评论审核、友情链接维护和 Logo 上传。
+6. 演示操作日志分页筛选。
+7. 演示后台头像、文章封面和友链 Logo 图片上传。
+8. 使用 `tom / 123456` 或注册新用户进入作者中心。
+9. 演示作者资料、作者文章、评论和作者仪表盘。
 
 ## 后续开发建议
 

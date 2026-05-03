@@ -1,5 +1,4 @@
 import http from '@/api/http.js';
-import { uploadFile } from '@/api/files.js';
 
 function hasConfig(config) {
   return config && Object.keys(config).length > 0;
@@ -30,7 +29,12 @@ export function updateFriendLinkStatus(id, status, config = {}) {
 }
 
 export function uploadFriendLinkLogo(file, config = {}) {
-  return uploadFile(file, config);
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return hasConfig(config)
+    ? http.post('/admin/files/friend-link-logo', formData, config)
+    : http.post('/admin/files/friend-link-logo', formData);
 }
 
 export function deleteFriendLink(id, config = {}) {

@@ -1,5 +1,13 @@
 import http from '@/api/http.js';
-import { uploadFile } from '@/api/files.js';
+
+function uploadTo(path, file, config = {}) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  return Object.keys(config).length
+    ? http.post(path, formData, config)
+    : http.post(path, formData);
+}
 
 export function getMyProfile() {
   return http.get('/admin/profile/me');
@@ -14,7 +22,7 @@ export function updateMyPassword(data) {
 }
 
 export function uploadAvatar(file, config = {}) {
-  return uploadFile(file, config);
+  return uploadTo('/admin/files/avatar', file, config);
 }
 
 export function getAuthorProfile() {
@@ -33,10 +41,5 @@ export function updateAuthorPassword(data) {
 }
 
 export function uploadAuthorAvatar(file, config = {}) {
-  const formData = new FormData();
-  formData.append('file', file);
-
-  return Object.keys(config).length
-    ? http.post('/user/files/avatar', formData, config)
-    : http.post('/user/files/avatar', formData);
+  return uploadTo('/user/files/avatar', file, config);
 }

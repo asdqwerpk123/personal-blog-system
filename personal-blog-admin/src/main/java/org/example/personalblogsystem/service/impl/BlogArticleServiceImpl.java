@@ -35,7 +35,7 @@ import java.util.UUID;
 
 /**
  * <p>
- * 鏂囩珷琛?鏈嶅姟瀹炵幇绫?
+ * 文章服务实现类
  * </p>
  *
  * @author student

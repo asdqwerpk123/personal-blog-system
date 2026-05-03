@@ -63,7 +63,7 @@
 - Response data: sanitized `user`, `accessToken`, `tokenType`, `expiresAt`
 - Only `SUPER_ADMIN` and `ADMIN` accounts can log in to the admin backend. Ordinary `USER` accounts receive `401`.
 - Successful login records an `AUTH / LOGIN / SUCCESS` operation log.
-- Failed login for an existing user records an `AUTH / LOGIN / FAILED` operation log.
+- Failed login for an existing user records an `AUTH / LOGIN / FAILURE` operation log.
 
 ### User Management
 

@@ -59,7 +59,7 @@ describe('friend link admin API', () => {
       'post /admin/friend-link',
       'put /admin/friend-link/8',
       'put /admin/friend-link/8/status',
-      'post /admin/files/upload',
+      'post /admin/files/friend-link-logo',
       'delete /admin/friend-link/8'
     ]);
     expect(capturedConfigs[0].params).toEqual({ current: 1, size: 10, keyword: 'Open' });

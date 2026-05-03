@@ -56,6 +56,8 @@ public class AdminAuthWebMvcConfig implements WebMvcConfigurer {
                 .addResourceLocations(ensureTrailingSlash(toResourceLocation(uploadProperties.getFriendLinkLogoDir())));
         registry.addResourceHandler("/uploads/avatars/**")
                 .addResourceLocations(ensureTrailingSlash(toResourceLocation(uploadProperties.getAvatarDir())));
+        registry.addResourceHandler("/uploads/article-covers/**")
+                .addResourceLocations(ensureTrailingSlash(toResourceLocation(uploadProperties.getArticleCoverDir())));
     }
 
     private String toResourceLocation(String directory) {

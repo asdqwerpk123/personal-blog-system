@@ -314,7 +314,7 @@ import {
   updateArticle,
   updateArticleStatus
 } from '@/api/articles.js';
-import { uploadFile } from '@/api/files.js';
+import { uploadArticleCover } from '@/api/files.js';
 
 const route = useRoute();
 
@@ -568,7 +568,7 @@ async function uploadCover(options) {
   coverUploading.value = true;
 
   try {
-    const response = await uploadFile(options.file);
+    const response = await uploadArticleCover(options.file);
     const data = response?.data ?? response ?? {};
     const url = response?.url || data?.url || '';
     articleForm.coverUrl = url;

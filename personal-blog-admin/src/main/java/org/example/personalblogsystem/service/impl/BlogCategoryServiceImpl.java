@@ -21,7 +21,7 @@ import java.util.Locale;
 
 /**
  * <p>
- * 鏂囩珷鍒嗙被琛?鏈嶅姟瀹炵幇绫?
+ * 文章分类服务实现类
  * </p>
  *
  * @author student

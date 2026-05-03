@@ -10,7 +10,7 @@ import {
   getCategoryList,
   updateArticle
 } from '../src/api/articles.js';
-import { uploadFile } from '../src/api/files.js';
+import { uploadArticleCover } from '../src/api/files.js';
 import ArticlesView from '../src/views/ArticlesView.vue';
 
 vi.mock('../src/api/articles.js', () => ({
@@ -24,7 +24,7 @@ vi.mock('../src/api/articles.js', () => ({
 }));
 
 vi.mock('../src/api/files.js', () => ({
-  uploadFile: vi.fn()
+  uploadArticleCover: vi.fn()
 }));
 
 async function mountWithArticleRoute(query = {}) {
@@ -96,10 +96,10 @@ describe('ArticlesView', () => {
     });
     createArticle.mockResolvedValue({ code: 200, message: '操作成功', data: { id: 200 } });
     updateArticle.mockResolvedValue({ code: 200, message: '操作成功', data: { id: 101 } });
-    uploadFile.mockResolvedValue({
+    uploadArticleCover.mockResolvedValue({
       code: 200,
       message: '上传成功',
-      url: 'http://minio.example.com/bucket/article-cover.png'
+      data: { url: '/uploads/article-covers/article-cover.png' }
     });
   });
 
@@ -152,8 +152,8 @@ describe('ArticlesView', () => {
 
     await wrapper.vm.uploadCover({ file: new File(['cover'], 'cover.png', { type: 'image/png' }) });
 
-    expect(uploadFile).toHaveBeenCalledWith(expect.any(File));
-    expect(wrapper.vm.articleForm.coverUrl).toBe('http://minio.example.com/bucket/article-cover.png');
+    expect(uploadArticleCover).toHaveBeenCalledWith(expect.any(File));
+    expect(wrapper.vm.articleForm.coverUrl).toBe('/uploads/article-covers/article-cover.png');
 
     wrapper.vm.articleForm.articleTitle = '后台新增文章';
     wrapper.vm.articleForm.articleSlug = 'admin-created-article';
@@ -172,7 +172,7 @@ describe('ArticlesView', () => {
       categoryId: 1,
       articleStatus: 'DRAFT',
       articleSummary: '摘要',
-      coverUrl: 'http://minio.example.com/bucket/article-cover.png',
+      coverUrl: '/uploads/article-covers/article-cover.png',
       articleContent: '正文内容',
       topFlag: true,
       allowComment: false

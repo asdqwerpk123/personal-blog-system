@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -20,17 +22,23 @@ import java.util.UUID;
 @ConditionalOnBean(MinioClient.class)
 public class MinioServiceImpl implements IMinioService {
 
+    private static final long MAX_UPLOAD_SIZE = 2L * 1024L * 1024L;
+    private static final Map<String, String> ALLOWED_IMAGE_EXTENSIONS = Map.of(
+            "image/jpeg", ".jpg",
+            "image/png", ".png",
+            "image/webp", ".webp",
+            "image/gif", ".gif"
+    );
+
     private final MinioClient minioClient;
 
     private final MinioProperties minioProperties;
 
     @Override
     public String upload(MultipartFile file) {
-        try {
-            if (file == null || file.isEmpty()) {
-                throw new RuntimeException("上传文件不能为空");
-            }
+        validateFile(file);
 
+        try {
             String bucketName = minioProperties.getBucketName();
 
             boolean bucketExists = minioClient.bucketExists(
@@ -43,19 +51,13 @@ public class MinioServiceImpl implements IMinioService {
                 minioClient.makeBucket(
                         MakeBucketArgs.builder()
                                 .bucket(bucketName)
-                                .build()
+                            .build()
                 );
             }
 
-            String originalFilename = file.getOriginalFilename();
-            String suffix = "";
-
-            if (originalFilename != null && originalFilename.contains(".")) {
-                suffix = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-
             String datePath = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
-            String objectName = datePath + "/" + UUID.randomUUID() + suffix;
+            String objectName = datePath + "/" + UUID.randomUUID()
+                    + ALLOWED_IMAGE_EXTENSIONS.get(normalizeContentType(file.getContentType()));
 
             minioClient.putObject(
                     PutObjectArgs.builder()
@@ -75,5 +77,21 @@ public class MinioServiceImpl implements IMinioService {
         } catch (Exception e) {
             throw new RuntimeException("文件上传 MinIO 失败：" + e.getMessage(), e);
         }
+    }
+
+    private void validateFile(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("请选择图片文件");
+        }
+        if (file.getSize() > MAX_UPLOAD_SIZE) {
+            throw new IllegalArgumentException("图片大小不能超过 2MB");
+        }
+        if (!ALLOWED_IMAGE_EXTENSIONS.containsKey(normalizeContentType(file.getContentType()))) {
+            throw new IllegalArgumentException("不支持的图片格式");
+        }
+    }
+
+    private String normalizeContentType(String contentType) {
+        return contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
     }
 }

@@ -14,7 +14,7 @@ import org.example.personalblogsystem.entity.SysUser;
 
 /**
  * <p>
- * 鐢ㄦ埛琛?鏈嶅姟绫?
+ * 系统用户服务接口
  * </p>
  *
  * @author student
