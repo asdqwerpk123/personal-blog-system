@@ -13,7 +13,7 @@ const BUSINESS_ERROR_MAP = [
   [/password incorrect|current password is incorrect/i, '当前密码错误'],
   [/article not found/i, '文章不存在'],
   [/comment not found/i, '评论不存在'],
-  [/file size exceeds limit/i, '图片大小不能超过 2MB'],
+  [/file size exceeds limit/i, '图片大小不能超过 10MB'],
   [/title is required/i, '文章标题不能为空'],
   [/content is required/i, '文章内容不能为空'],
   [/register failed/i, '注册失败，请稍后重试'],

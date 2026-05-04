@@ -176,19 +176,70 @@ class UserArticleControllerTest {
     @Test
     void shouldCreatePendingCommentForCurrentUser() throws Exception {
         String token = loginAndGetAccessToken("jerry", "123456");
-        Map<String, Object> request = new LinkedHashMap<>();
-        request.put("articleId", 1L);
-        request.put("commentContent", "这是一条新的用户评论");
 
         mockMvc.perform(post("/user/comments")
                         .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(commentRequest(1L))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
                 .andExpect(jsonPath("$.data.articleId").value(1))
                 .andExpect(jsonPath("$.data.userId").value(5))
                 .andExpect(jsonPath("$.data.commentStatus").value("PENDING"));
+    }
+
+    @Test
+    void shouldRejectCommentForDraftArticle() throws Exception {
+        String token = loginAndGetAccessToken("jerry", "123456");
+
+        mockMvc.perform(post("/user/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(commentRequest(3L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("文章暂不允许评论"));
+    }
+
+    @Test
+    void shouldRejectCommentForPrivateArticle() throws Exception {
+        jdbcTemplate.update("UPDATE blog_article SET article_status = 'PRIVATE' WHERE id = ?", 1L);
+        String token = loginAndGetAccessToken("jerry", "123456");
+
+        mockMvc.perform(post("/user/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(commentRequest(1L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("文章暂不允许评论"));
+    }
+
+    @Test
+    void shouldRejectCommentWhenArticleDisallowsComments() throws Exception {
+        jdbcTemplate.update("UPDATE blog_article SET allow_comment = 0 WHERE id = ?", 1L);
+        String token = loginAndGetAccessToken("jerry", "123456");
+
+        mockMvc.perform(post("/user/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(commentRequest(1L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("文章暂不允许评论"));
+    }
+
+    @Test
+    void shouldReturnArticleNotFoundWhenCommentArticleMissing() throws Exception {
+        String token = loginAndGetAccessToken("jerry", "123456");
+
+        mockMvc.perform(post("/user/comments")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(commentRequest(999999L))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.message").value("文章不存在"));
     }
 
     @Test
@@ -223,6 +274,13 @@ class UserArticleControllerTest {
         request.put("tagIds", java.util.List.of(1L, 3L));
         request.put("coverUrl", "https://example.com/ignored.jpg");
         request.put("authorId", 1L);
+        return request;
+    }
+
+    private Map<String, Object> commentRequest(Long articleId) {
+        Map<String, Object> request = new LinkedHashMap<>();
+        request.put("articleId", articleId);
+        request.put("commentContent", "这是一条新的用户评论");
         return request;
     }
 

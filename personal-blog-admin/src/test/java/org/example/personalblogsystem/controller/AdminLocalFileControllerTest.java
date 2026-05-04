@@ -97,11 +97,11 @@ class AdminLocalFileControllerTest {
     @Test
     void shouldRejectOversizedArticleCover() throws Exception {
         mockMvc.perform(multipart("/admin/files/article-cover")
-                        .file(new MockMultipartFile("file", "cover.png", "image/png", new byte[2 * 1024 * 1024 + 1]))
+                        .file(new MockMultipartFile("file", "cover.png", "image/png", new byte[10 * 1024 * 1024 + 1]))
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(400))
-                .andExpect(jsonPath("$.message").value("图片大小不能超过 2MB"));
+                .andExpect(jsonPath("$.message").value("图片大小不能超过 10MB"));
     }
 
     @Test

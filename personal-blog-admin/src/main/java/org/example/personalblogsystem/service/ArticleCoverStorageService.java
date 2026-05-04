@@ -17,7 +17,7 @@ import java.util.UUID;
 @Service
 public class ArticleCoverStorageService {
 
-    private static final long MAX_COVER_SIZE = 2L * 1024L * 1024L;
+    private static final long MAX_COVER_SIZE = 10L * 1024L * 1024L;
     private static final Map<String, String> ALLOWED_IMAGE_EXTENSIONS = Map.of(
             "image/jpeg", ".jpg",
             "image/png", ".png",
@@ -65,7 +65,7 @@ public class ArticleCoverStorageService {
             throw new IllegalArgumentException("请选择图片文件");
         }
         if (file.getSize() > MAX_COVER_SIZE) {
-            throw new IllegalArgumentException("图片大小不能超过 2MB");
+            throw new IllegalArgumentException("图片大小不能超过 10MB");
         }
         if (!ALLOWED_IMAGE_EXTENSIONS.containsKey(normalizeContentType(file.getContentType()))) {
             throw new IllegalArgumentException("不支持的图片格式");

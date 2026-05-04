@@ -155,7 +155,7 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         if (!StringUtils.hasText(request.getCommentContent()) || request.getCommentContent().trim().length() < 2) {
             throw new IllegalArgumentException("评论内容不能少于 2 个字符");
         }
-        validateArticleExists(request.getArticleId());
+        validateCommentableArticle(request.getArticleId());
 
         LocalDateTime now = LocalDateTime.now();
         BlogComment comment = new BlogComment();
@@ -215,10 +215,13 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         return normalized;
     }
 
-    private void validateArticleExists(Long articleId) {
+    private void validateCommentableArticle(Long articleId) {
         BlogArticle article = blogArticleMapper.selectById(articleId);
         if (article == null) {
             throw new BlogException(404, "文章不存在");
+        }
+        if (!"PUBLISHED".equals(article.getArticleStatus()) || !Boolean.TRUE.equals(article.getAllowComment())) {
+            throw new IllegalArgumentException("文章暂不允许评论");
         }
     }
 

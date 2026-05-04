@@ -22,7 +22,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public Result<Object> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException exception) {
-        return Result.fail(ResultCodeEnum.PARAM_ERROR.getCode(), "图片大小不能超过 2MB");
+        return Result.fail(ResultCodeEnum.PARAM_ERROR.getCode(), "图片大小不能超过 10MB");
     }
 
     @ExceptionHandler(Exception.class)

@@ -72,6 +72,18 @@ class FileControllerTest {
                 .andExpect(jsonPath("$.message").value("不支持的图片格式"));
     }
 
+    @Test
+    void shouldRejectOversizedMinioUploadBeforeCallingMinio() throws Exception {
+        String token = loginAndGetAccessToken("root", "123456");
+
+        mockMvc.perform(multipart("/admin/files/upload")
+                        .file(new MockMultipartFile("file", "cover.png", "image/png", new byte[10 * 1024 * 1024 + 1]))
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(400))
+                .andExpect(jsonPath("$.message").value("图片大小不能超过 10MB"));
+    }
+
     private MockMultipartFile uploadFile() {
         return new MockMultipartFile(
                 "file",

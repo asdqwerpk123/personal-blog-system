@@ -9,7 +9,7 @@ describe('business error messages', () => {
     expect(toChineseBusinessMessage('tagName already exists')).toBe('标签名称已存在');
     expect(toChineseBusinessMessage('friend link is referenced')).toBe('该友链数据被引用，不能删除');
     expect(toChineseBusinessMessage('unsupported image type')).toBe('不支持的图片格式');
-    expect(toChineseBusinessMessage('file size exceeds limit')).toBe('图片大小不能超过 2MB');
+    expect(toChineseBusinessMessage('file size exceeds limit')).toBe('图片大小不能超过 10MB');
     expect(toChineseBusinessMessage('cannot manage this user')).toBe('无权限管理该用户');
     expect(toChineseBusinessMessage('old password is incorrect')).toBe('原密码错误');
     expect(toChineseBusinessMessage('unauthorized')).toBe('未登录或登录已过期');
