@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+  <rect width="640" height="360" fill="#e6efe5"/>
+  <path d="M78 258h484" stroke="#8ca891" stroke-width="8" stroke-linecap="round"/>
+  <path d="M118 232c50-82 112-120 186-113 72 7 117 55 144 113" fill="none" stroke="#2f6f4e" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="430" cy="110" r="28" fill="#d6903d"/>
+  <text x="78" y="300" fill="#415246" font-family="Arial, sans-serif" font-size="28">Personal Blog</text>
+</svg>
