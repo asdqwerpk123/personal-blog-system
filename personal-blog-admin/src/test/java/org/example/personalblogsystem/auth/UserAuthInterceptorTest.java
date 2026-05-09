@@ -25,8 +25,10 @@ class UserAuthInterceptorTest {
     private JwtTokenService jwtTokenService;
     private ProtectedController protectedController;
     private RegisterController registerController;
+    private LoginController loginController;
     private Method protectedMethod;
     private Method registerMethod;
+    private Method loginMethod;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -38,8 +40,10 @@ class UserAuthInterceptorTest {
         interceptor = new UserAuthInterceptor(jwtTokenService);
         protectedController = new ProtectedController();
         registerController = new RegisterController();
+        loginController = new LoginController();
         protectedMethod = ProtectedController.class.getDeclaredMethod("profile");
         registerMethod = RegisterController.class.getDeclaredMethod("register");
+        loginMethod = LoginController.class.getDeclaredMethod("login");
     }
 
     @AfterEach
@@ -113,6 +117,28 @@ class UserAuthInterceptorTest {
         assertThat(UserAuthContext.get()).isNull();
     }
 
+    @Test
+    void shouldAllowLoginWithoutBearerToken() throws Exception {
+        HandlerMethod handlerMethod = new HandlerMethod(loginController, loginMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/user/auth/login");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThat(interceptor.preHandle(request, response, handlerMethod)).isTrue();
+        assertThat(UserAuthContext.get()).isNull();
+    }
+
+    @Test
+    void shouldAllowLoginWithoutBearerTokenUnderContextPath() throws Exception {
+        HandlerMethod handlerMethod = new HandlerMethod(loginController, loginMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/personal-blog-system/user/auth/login");
+        request.setContextPath("/personal-blog-system");
+        request.setServletPath("/user/auth/login");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThat(interceptor.preHandle(request, response, handlerMethod)).isTrue();
+        assertThat(UserAuthContext.get()).isNull();
+    }
+
     @RestController
     @RequestMapping("/user")
     static class ProtectedController {
@@ -128,6 +154,15 @@ class UserAuthInterceptorTest {
 
         @PostMapping("/user/auth/register")
         public String register() {
+            return "ok";
+        }
+    }
+
+    @RestController
+    static class LoginController {
+
+        @PostMapping("/user/auth/login")
+        public String login() {
             return "ok";
         }
     }

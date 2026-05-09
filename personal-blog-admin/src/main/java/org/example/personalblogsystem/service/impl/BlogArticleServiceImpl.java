@@ -4,12 +4,17 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.example.personalblogcommon.exception.BlogException;
+import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.auth.AdminAuthPrincipal;
+import org.example.personalblogsystem.dto.PublicArticleDetailResponse;
+import org.example.personalblogsystem.dto.PublicArticleResponse;
+import org.example.personalblogsystem.dto.PublicTagResponse;
 import org.example.personalblogsystem.dto.UserArticleRequest;
 import org.example.personalblogsystem.dto.UserArticleResponse;
 import org.example.personalblogsystem.dto.UserDashboardSummaryResponse;
 import org.example.personalblogsystem.entity.BlogArticle;
+import org.example.personalblogsystem.entity.BlogArticleTag;
 import org.example.personalblogsystem.entity.BlogCategory;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.entity.SysUser;
@@ -76,6 +81,56 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         }
         queryWrapper.orderByDesc(BlogArticle::getPublishedTime, BlogArticle::getUpdateTime, BlogArticle::getId);
         return page(new Page<>(current, size), queryWrapper);
+    }
+
+    @Override
+    public Page<PublicArticleResponse> pagePublicArticles(long current,
+                                                          long size,
+                                                          String keyword,
+                                                          Long categoryId,
+                                                          Long tagId) {
+        LambdaQueryWrapper<BlogArticle> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(BlogArticle::getArticleStatus, "PUBLISHED");
+        if (StringUtils.hasText(keyword)) {
+            String trimmedKeyword = keyword.trim();
+            queryWrapper.and(wrapper -> wrapper.like(BlogArticle::getArticleTitle, trimmedKeyword)
+                    .or()
+                    .like(BlogArticle::getArticleSummary, trimmedKeyword));
+        }
+        if (categoryId != null) {
+            queryWrapper.eq(BlogArticle::getCategoryId, categoryId);
+        }
+        if (tagId != null) {
+            List<Long> articleIds = listPublicArticleIdsByTagId(tagId);
+            if (articleIds.isEmpty()) {
+                queryWrapper.eq(BlogArticle::getId, -1L);
+            } else {
+                queryWrapper.in(BlogArticle::getId, articleIds);
+            }
+        }
+        queryWrapper.orderByDesc(BlogArticle::getTopFlag, BlogArticle::getPublishedTime, BlogArticle::getId);
+
+        Page<BlogArticle> articlePage = page(new Page<>(current, size), queryWrapper);
+        Page<PublicArticleResponse> responsePage = new Page<>(
+                articlePage.getCurrent(),
+                articlePage.getSize(),
+                articlePage.getTotal());
+        responsePage.setRecords(articlePage.getRecords().stream()
+                .map(this::toPublicArticleResponse)
+                .toList());
+        return responsePage;
+    }
+
+    @Override
+    public PublicArticleDetailResponse getPublicArticle(Long id) {
+        BlogArticle article = lambdaQuery()
+                .eq(BlogArticle::getId, id)
+                .eq(BlogArticle::getArticleStatus, "PUBLISHED")
+                .one();
+        if (article == null) {
+            throw new BlogException(ResultCodeEnum.NOT_FOUND);
+        }
+        return toPublicArticleDetailResponse(article);
     }
 
     @Override
@@ -483,6 +538,59 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         return response;
     }
 
+    private PublicArticleResponse toPublicArticleResponse(BlogArticle article) {
+        PublicArticleResponse response = new PublicArticleResponse();
+        populatePublicArticleResponse(response, article);
+        return response;
+    }
+
+    private PublicArticleDetailResponse toPublicArticleDetailResponse(BlogArticle article) {
+        PublicArticleDetailResponse response = new PublicArticleDetailResponse();
+        populatePublicArticleResponse(response, article);
+        response.setArticleSlug(article.getArticleSlug());
+        response.setArticleContent(article.getArticleContent());
+        response.setAllowComment(article.getAllowComment());
+        response.setCreateTime(article.getCreateTime());
+        response.setUpdateTime(article.getUpdateTime());
+        return response;
+    }
+
+    private void populatePublicArticleResponse(PublicArticleResponse response, BlogArticle article) {
+        response.setId(article.getId());
+        response.setArticleTitle(article.getArticleTitle());
+        response.setArticleSummary(article.getArticleSummary());
+        response.setCoverUrl(article.getCoverUrl());
+        response.setAuthorId(article.getAuthorId());
+        response.setAuthorName(resolveUserDisplayName(article.getAuthorId()));
+        response.setAuthorAvatarUrl(resolveUserAvatarUrl(article.getAuthorId()));
+        response.setCategoryId(article.getCategoryId());
+        response.setCategoryName(resolveCategoryName(article.getCategoryId()));
+        response.setTags(blogArticleTagService.listTagsByArticleId(article.getId()).stream()
+                .map(this::toPublicTagResponse)
+                .toList());
+        response.setTopFlag(article.getTopFlag());
+        response.setViewCount(article.getViewCount());
+        response.setPublishedTime(article.getPublishedTime());
+    }
+
+    private PublicTagResponse toPublicTagResponse(BlogTag tag) {
+        PublicTagResponse response = new PublicTagResponse();
+        response.setId(tag.getId());
+        response.setTagName(tag.getTagName());
+        response.setDescription(tag.getDescription());
+        return response;
+    }
+
+    private List<Long> listPublicArticleIdsByTagId(Long tagId) {
+        return blogArticleTagService.list(new LambdaQueryWrapper<BlogArticleTag>()
+                        .eq(BlogArticleTag::getTagId, tagId)
+                        .eq(BlogArticleTag::getDeleted, false))
+                .stream()
+                .map(BlogArticleTag::getArticleId)
+                .distinct()
+                .toList();
+    }
+
     private String resolveCategoryName(Long categoryId) {
         if (categoryId == null) {
             return null;
@@ -500,6 +608,14 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
             return null;
         }
         return StringUtils.hasText(user.getNickName()) ? user.getNickName() : user.getUserName();
+    }
+
+    private String resolveUserAvatarUrl(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        return user == null ? null : user.getAvatarUrl();
     }
 
     private void validateArticleReferences(BlogArticle article, Long currentArticleId) {

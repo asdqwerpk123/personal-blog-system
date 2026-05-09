@@ -9,5 +9,7 @@ public interface IAuthService {
 
     LoginUserResponse login(LoginRequest request);
 
+    LoginUserResponse loginUser(LoginRequest request);
+
     SysUserResponse register(UserRegisterRequest request);
 }

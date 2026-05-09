@@ -1,0 +1,25 @@
+{
+  "name": "personal-blog-uniapp",
+  "appid": "__UNI__PERSONALBLOG",
+  "description": "Personal blog mobile/H5 client built with uni-app.",
+  "versionName": "0.1.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "app-plus": {
+    "usingComponents": true
+  },
+  "h5": {
+    "title": "Personal Blog",
+    "router": {
+      "mode": "hash",
+      "base": "/"
+    }
+  },
+  "mp-weixin": {
+    "appid": "",
+    "setting": {
+      "urlCheck": true
+    },
+    "usingComponents": true
+  }
+}

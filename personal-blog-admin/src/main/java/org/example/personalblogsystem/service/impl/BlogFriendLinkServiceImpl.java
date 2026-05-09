@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.example.personalblogsystem.auth.AdminAuthContext;
+import org.example.personalblogsystem.dto.PublicFriendLinkResponse;
 import org.example.personalblogsystem.entity.BlogFriendLink;
 import org.example.personalblogsystem.mapper.BlogFriendLinkMapper;
 import org.example.personalblogsystem.mapper.SysUserMapper;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -32,6 +34,16 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         this.jdbcTemplate = jdbcTemplate;
         this.sysUserMapper = sysUserMapper;
         this.operationLogRecordService = operationLogRecordService;
+    }
+
+    @Override
+    public List<PublicFriendLinkResponse> listPublicFriendLinks() {
+        LambdaQueryWrapper<BlogFriendLink> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(BlogFriendLink::getLinkStatus, "APPROVED")
+                .orderByAsc(BlogFriendLink::getId);
+        return list(queryWrapper).stream()
+                .map(this::toPublicFriendLinkResponse)
+                .toList();
     }
 
     @Override
@@ -158,6 +170,17 @@ public class BlogFriendLinkServiceImpl extends ServiceImpl<BlogFriendLinkMapper,
         if (StringUtils.hasText(friendLink.getLinkStatus())) {
             normalizeStatus(friendLink.getLinkStatus(), null);
         }
+    }
+
+    private PublicFriendLinkResponse toPublicFriendLinkResponse(BlogFriendLink friendLink) {
+        PublicFriendLinkResponse response = new PublicFriendLinkResponse();
+        response.setId(friendLink.getId());
+        response.setSiteName(friendLink.getSiteName());
+        response.setSiteUrl(friendLink.getSiteUrl());
+        response.setSiteLogo(friendLink.getSiteLogo());
+        response.setSiteDesc(friendLink.getSiteDesc());
+        response.setOwnerName(friendLink.getOwnerName());
+        return response;
     }
 
     private void validateFriendLinkForUpdate(BlogFriendLink friendLink) {
