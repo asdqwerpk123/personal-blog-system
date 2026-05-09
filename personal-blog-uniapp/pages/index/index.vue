@@ -87,6 +87,7 @@ const total = ref(0)
 const loading = ref(false)
 const loadingMore = ref(false)
 const finished = ref(false)
+const articleRequestSeq = ref(0)
 
 onLoad((options) => {
   selectedCategoryId.value = normalizeId(options.categoryId)
@@ -123,12 +124,24 @@ async function loadFilters() {
 }
 
 async function refreshArticles() {
+  const requestId = ++articleRequestSeq.value
   current.value = 1
   finished.value = false
-  await loadArticles(true)
+  await loadArticles(true, requestId)
 }
 
-async function loadArticles(reset) {
+async function loadArticles(reset, requestId = articleRequestSeq.value) {
+  if (!reset && (loading.value || loadingMore.value)) {
+    return
+  }
+
+  const filters = {
+    current: reset ? 1 : current.value,
+    keyword: keyword.value,
+    categoryId: selectedCategoryId.value || undefined,
+    tagId: selectedTagId.value || undefined
+  }
+
   if (reset) {
     loading.value = true
   } else {
@@ -137,12 +150,15 @@ async function loadArticles(reset) {
 
   try {
     const page = await pagePublicArticles({
-      current: current.value,
+      current: filters.current,
       size,
-      keyword: keyword.value,
-      categoryId: selectedCategoryId.value || undefined,
-      tagId: selectedTagId.value || undefined
+      keyword: filters.keyword,
+      categoryId: filters.categoryId,
+      tagId: filters.tagId
     })
+    if (requestId !== articleRequestSeq.value) {
+      return
+    }
     const records = page && page.records ? page.records : []
     total.value = page && typeof page.total === "number" ? page.total : records.length
     articles.value = reset ? records : articles.value.concat(records)
@@ -151,8 +167,10 @@ async function loadArticles(reset) {
       current.value += 1
     }
   } finally {
-    loading.value = false
-    loadingMore.value = false
+    if (requestId === articleRequestSeq.value) {
+      loading.value = false
+      loadingMore.value = false
+    }
   }
 }
 
