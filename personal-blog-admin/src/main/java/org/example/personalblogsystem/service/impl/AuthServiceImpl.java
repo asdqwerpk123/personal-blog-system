@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.Instant;
+import java.util.function.Predicate;
 
 @Service
 public class AuthServiceImpl implements IAuthService {
@@ -42,6 +43,15 @@ public class AuthServiceImpl implements IAuthService {
 
     @Override
     public LoginUserResponse login(LoginRequest request) {
+        return loginInternal(request, this::isSupportedRole);
+    }
+
+    @Override
+    public LoginUserResponse loginUser(LoginRequest request) {
+        return loginInternal(request, this::isUserRole);
+    }
+
+    private LoginUserResponse loginInternal(LoginRequest request, Predicate<String> rolePredicate) {
         validateRequest(request);
 
         String userName = request.getUserName().trim();
@@ -54,7 +64,7 @@ public class AuthServiceImpl implements IAuthService {
             operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败: " + row.getUserName());
             throw new IllegalArgumentException("用户名或密码错误");
         }
-        if (!isSupportedRole(row.getRoleCode())) {
+        if (!rolePredicate.test(row.getRoleCode())) {
             operationLogRecordService.recordFailure(row.getId(), "AUTH", row.getId(), "LOGIN_FAILURE", "登录失败: 无效角色 " + row.getUserName());
             throw new BlogException(ResultCodeEnum.UNAUTHORIZED);
         }
@@ -86,6 +96,10 @@ public class AuthServiceImpl implements IAuthService {
         return "SUPER_ADMIN".equalsIgnoreCase(roleCode)
                 || "ADMIN".equalsIgnoreCase(roleCode)
                 || "USER".equalsIgnoreCase(roleCode);
+    }
+
+    private boolean isUserRole(String roleCode) {
+        return "USER".equalsIgnoreCase(roleCode);
     }
 
     private LoginUserResponse toResponse(LoginUserQueryRow row) {

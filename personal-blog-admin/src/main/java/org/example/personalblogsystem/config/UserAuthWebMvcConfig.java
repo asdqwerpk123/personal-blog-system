@@ -36,5 +36,9 @@ public class UserAuthWebMvcConfig implements WebMvcConfigurer {
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders("Authorization");
+        registry.addMapping("/public/**")
+                .allowedOrigins(allowedOrigins)
+                .allowedMethods("GET", "OPTIONS")
+                .allowedHeaders("*");
     }
 }

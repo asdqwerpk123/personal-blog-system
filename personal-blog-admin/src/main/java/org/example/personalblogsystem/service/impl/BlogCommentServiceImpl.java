@@ -4,7 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.example.personalblogcommon.exception.BlogException;
+import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.auth.AdminAuthContext;
+import org.example.personalblogsystem.dto.PublicCommentResponse;
 import org.example.personalblogsystem.dto.UserCommentCreateRequest;
 import org.example.personalblogsystem.dto.UserCommentResponse;
 import org.example.personalblogsystem.entity.BlogArticle;
@@ -69,6 +71,25 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         queryWrapper.eq(BlogComment::getArticleId, articleId)
                 .orderByAsc(BlogComment::getCreateTime, BlogComment::getId);
         return list(queryWrapper);
+    }
+
+    @Override
+    public Page<PublicCommentResponse> pagePublicCommentsByArticleId(Long articleId, long current, long size) {
+        validatePublicArticle(articleId);
+
+        LambdaQueryWrapper<BlogComment> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(BlogComment::getArticleId, articleId)
+                .eq(BlogComment::getCommentStatus, "APPROVED")
+                .orderByAsc(BlogComment::getCreateTime, BlogComment::getId);
+        Page<BlogComment> commentPage = page(new Page<>(current, size), queryWrapper);
+        Page<PublicCommentResponse> responsePage = new Page<>(
+                commentPage.getCurrent(),
+                commentPage.getSize(),
+                commentPage.getTotal());
+        responsePage.setRecords(commentPage.getRecords().stream()
+                .map(this::toPublicCommentResponse)
+                .toList());
+        return responsePage;
     }
 
     @Override
@@ -225,6 +246,13 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         }
     }
 
+    private void validatePublicArticle(Long articleId) {
+        BlogArticle article = blogArticleMapper.selectById(articleId);
+        if (article == null || !"PUBLISHED".equals(article.getArticleStatus())) {
+            throw new BlogException(ResultCodeEnum.NOT_FOUND);
+        }
+    }
+
     private void validateOwnedArticle(Long userId, Long articleId) {
         BlogArticle article = blogArticleMapper.selectById(articleId);
         if (article == null) {
@@ -253,6 +281,19 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
         return response;
     }
 
+    private PublicCommentResponse toPublicCommentResponse(BlogComment comment) {
+        PublicCommentResponse response = new PublicCommentResponse();
+        response.setId(comment.getId());
+        response.setArticleId(comment.getArticleId());
+        response.setParentId(comment.getParentId());
+        response.setUserId(comment.getUserId());
+        response.setNickName(resolveUserDisplayName(comment.getUserId()));
+        response.setAvatarUrl(resolveUserAvatarUrl(comment.getUserId()));
+        response.setCommentContent(comment.getCommentContent());
+        response.setCreateTime(comment.getCreateTime());
+        return response;
+    }
+
     private String resolveArticleTitle(Long articleId) {
         if (articleId == null) {
             return null;
@@ -270,6 +311,14 @@ public class BlogCommentServiceImpl extends ServiceImpl<BlogCommentMapper, BlogC
             return null;
         }
         return StringUtils.hasText(user.getNickName()) ? user.getNickName() : user.getUserName();
+    }
+
+    private String resolveUserAvatarUrl(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+        SysUser user = sysUserMapper.selectById(userId);
+        return user == null ? null : user.getAvatarUrl();
     }
 
     private String getRootMessage(Throwable throwable) {

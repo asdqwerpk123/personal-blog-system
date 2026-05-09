@@ -3,6 +3,7 @@ package org.example.personalblogsystem.service;
 import org.example.personalblogsystem.entity.BlogCategory;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.example.personalblogsystem.dto.PublicCategoryResponse;
 
 import java.util.List;
 
@@ -17,6 +18,8 @@ import java.util.List;
 public interface IBlogCategoryService extends IService<BlogCategory> {
 
     List<BlogCategory> listCategories();
+
+    List<PublicCategoryResponse> listPublicCategories();
 
     Page<BlogCategory> pageCategories(long current, long size, String keyword);
 

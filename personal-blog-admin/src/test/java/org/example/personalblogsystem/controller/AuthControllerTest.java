@@ -134,6 +134,36 @@ class AuthControllerTest {
     }
 
     @Test
+    void shouldLoginNormalUserThroughUserAuthLogin() throws Exception {
+        MvcResult result = mockMvc.perform(post("/user/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest("jerry", "123456"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.id").value(5))
+                .andExpect(jsonPath("$.data.userName").value("jerry"))
+                .andExpect(jsonPath("$.data.roleCode").value("USER"))
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andReturn();
+
+        String token = objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("accessToken").asText();
+        AdminAuthPrincipal principal = jwtTokenService.parseAccessToken(token);
+        assertThat(principal.getUserId()).isEqualTo(5L);
+        assertThat(principal.getUserName()).isEqualTo("jerry");
+        assertThat(principal.getRoleCode()).isEqualTo("USER");
+    }
+
+    @Test
+    void shouldRejectAdminThroughUserAuthLoginWithoutReturningToken() throws Exception {
+        mockMvc.perform(post("/user/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest("admin_zhang", "123456"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401))
+                .andExpect(jsonPath("$.data.accessToken").doesNotExist());
+    }
+
+    @Test
     void shouldRejectBlankUsernameOnLogin() throws Exception {
         mockMvc.perform(post("/admin/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

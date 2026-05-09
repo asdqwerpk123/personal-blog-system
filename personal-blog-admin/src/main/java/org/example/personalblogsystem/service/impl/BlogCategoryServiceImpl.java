@@ -3,6 +3,7 @@ package org.example.personalblogsystem.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import org.example.personalblogsystem.dto.PublicCategoryResponse;
 import org.example.personalblogsystem.auth.AdminAuthContext;
 import org.example.personalblogsystem.entity.BlogArticle;
 import org.example.personalblogsystem.entity.BlogCategory;
@@ -47,6 +48,15 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         LambdaQueryWrapper<BlogCategory> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.orderByAsc(BlogCategory::getSortNo, BlogCategory::getId);
         return list(queryWrapper);
+    }
+
+    @Override
+    public List<PublicCategoryResponse> listPublicCategories() {
+        LambdaQueryWrapper<BlogCategory> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByAsc(BlogCategory::getSortNo, BlogCategory::getId);
+        return list(queryWrapper).stream()
+                .map(this::toPublicCategoryResponse)
+                .toList();
     }
 
     @Override
@@ -131,6 +141,15 @@ public class BlogCategoryServiceImpl extends ServiceImpl<BlogCategoryMapper, Blo
         if (createdBy == null || sysUserMapper.selectById(createdBy) == null) {
             throw new IllegalArgumentException("createdBy is invalid");
         }
+    }
+
+    private PublicCategoryResponse toPublicCategoryResponse(BlogCategory category) {
+        PublicCategoryResponse response = new PublicCategoryResponse();
+        response.setId(category.getId());
+        response.setCategoryName(category.getCategoryName());
+        response.setDescription(category.getDescription());
+        response.setSortNo(category.getSortNo());
+        return response;
     }
 
     private void validateCategoryNameUnique(String categoryName, Long currentCategoryId) {

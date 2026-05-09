@@ -43,6 +43,20 @@ class UserCommentControllerTest {
     }
 
     @Test
+    void shouldRejectUnauthenticatedCreateComment() throws Exception {
+        mockMvc.perform(post("/user/comments")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "articleId": 1,
+                                  "commentContent": "public comment"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(401));
+    }
+
+    @Test
     void shouldPageAndDeleteOnlyCurrentUserComments() throws Exception {
         String token = loginAndGetAccessToken("jerry", "123456");
 

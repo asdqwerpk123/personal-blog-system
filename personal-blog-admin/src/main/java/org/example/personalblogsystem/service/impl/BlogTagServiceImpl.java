@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.example.personalblogsystem.auth.AdminAuthContext;
+import org.example.personalblogsystem.dto.PublicTagResponse;
 import org.example.personalblogsystem.entity.BlogArticleTag;
 import org.example.personalblogsystem.entity.BlogTag;
 import org.example.personalblogsystem.mapper.BlogArticleTagMapper;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 
 @Service
@@ -27,6 +29,15 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
                               OperationLogRecordService operationLogRecordService) {
         this.blogArticleTagMapper = blogArticleTagMapper;
         this.operationLogRecordService = operationLogRecordService;
+    }
+
+    @Override
+    public List<PublicTagResponse> listPublicTags() {
+        LambdaQueryWrapper<BlogTag> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.orderByAsc(BlogTag::getId);
+        return list(queryWrapper).stream()
+                .map(this::toPublicTagResponse)
+                .toList();
     }
 
     @Override
@@ -114,6 +125,14 @@ public class BlogTagServiceImpl extends ServiceImpl<BlogTagMapper, BlogTag> impl
         if (duplicateCount != null && duplicateCount > 0) {
             throw new IllegalArgumentException("tagName already exists");
         }
+    }
+
+    private PublicTagResponse toPublicTagResponse(BlogTag tag) {
+        PublicTagResponse response = new PublicTagResponse();
+        response.setId(tag.getId());
+        response.setTagName(tag.getTagName());
+        response.setDescription(tag.getDescription());
+        return response;
     }
 
     private IllegalArgumentException translateDuplicateTagNameException(DataAccessException exception) {

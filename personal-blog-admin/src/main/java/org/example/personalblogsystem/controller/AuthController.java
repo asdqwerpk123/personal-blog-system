@@ -29,6 +29,13 @@ public class AuthController {
     }
 
     @SecurityRequirements
+    @Operation(summary = "uni-app user login", description = "Only USER role accounts can obtain a uni-app access token.", security = {})
+    @PostMapping("/user/auth/login")
+    public Result<LoginUserResponse> userLogin(@RequestBody LoginRequest request) {
+        return Result.ok(authService.loginUser(request));
+    }
+
+    @SecurityRequirements
     @Operation(summary = "用户注册", description = "创建普通用户并默认分配 USER 角色。", security = {})
     @PostMapping("/user/auth/register")
     public Result<SysUserResponse> register(@RequestBody UserRegisterRequest request) {

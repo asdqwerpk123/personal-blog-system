@@ -13,6 +13,7 @@ public class UserAuthInterceptor implements AsyncHandlerInterceptor {
     private static final String AUTHORIZATION_HEADER = "Authorization";
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String USER_REGISTER_PATH = "/user/auth/register";
+    private static final String USER_LOGIN_PATH = "/user/auth/login";
 
     private final JwtTokenService jwtTokenService;
 
@@ -55,8 +56,12 @@ public class UserAuthInterceptor implements AsyncHandlerInterceptor {
     }
 
     private boolean isPublicUserEndpoint(HttpServletRequest request) {
-        return "POST".equalsIgnoreCase(request.getMethod())
-                && USER_REGISTER_PATH.equals(resolvePathWithinApplication(request));
+        if (!"POST".equalsIgnoreCase(request.getMethod())) {
+            return false;
+        }
+        String pathWithinApplication = resolvePathWithinApplication(request);
+        return USER_REGISTER_PATH.equals(pathWithinApplication)
+                || USER_LOGIN_PATH.equals(pathWithinApplication);
     }
 
     private String resolvePathWithinApplication(HttpServletRequest request) {
