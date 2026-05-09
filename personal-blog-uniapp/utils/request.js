@@ -34,8 +34,24 @@ function shouldAttachAuthorization(url, method) {
   return path.startsWith("/user/")
 }
 
+export function requiresUserAuthorization(url, method) {
+  return shouldAttachAuthorization(url, method)
+}
+
 export function getToken() {
   return uni.getStorageSync(storageKeys.token) || ""
+}
+
+export function getRoleCode() {
+  return uni.getStorageSync(storageKeys.roleCode) || ""
+}
+
+export function getStoredUserInfo() {
+  return uni.getStorageSync(storageKeys.userInfo) || {}
+}
+
+export function isUserLoggedIn() {
+  return Boolean(getToken() && getRoleCode() === "USER")
 }
 
 export function clearLoginState() {
@@ -54,21 +70,53 @@ export function saveLoginState(loginData) {
   uni.setStorageSync(storageKeys.roleCode, loginData.roleCode)
 }
 
-function redirectToLogin() {
+export function saveUserInfo(userInfo) {
+  const previous = getStoredUserInfo()
+  const merged = {
+    ...previous,
+    ...userInfo,
+    roleCode: userInfo && userInfo.roleCode ? userInfo.roleCode : getRoleCode()
+  }
+  uni.setStorageSync(storageKeys.userInfo, merged)
+  if (merged.roleCode) {
+    uni.setStorageSync(storageKeys.roleCode, merged.roleCode)
+  }
+  return merged
+}
+
+export function getCurrentPageUrl() {
   const pages = getCurrentPages()
-  const currentRoute = pages.length ? `/${pages[pages.length - 1].route}` : ""
+  if (!pages.length) {
+    return ""
+  }
+  const currentPage = pages[pages.length - 1]
+  const route = `/${currentPage.route}`
+  const options = currentPage.options || {}
+  const query = Object.keys(options)
+    .map((key) => `${encodeURIComponent(key)}=${encodeURIComponent(options[key])}`)
+    .join("&")
+  return query ? `${route}?${query}` : route
+}
+
+export function buildLoginUrl(redirect) {
+  const target = redirect || getCurrentPageUrl()
+  return target ? `${LOGIN_PAGE}?redirect=${encodeURIComponent(target)}` : LOGIN_PAGE
+}
+
+function redirectToLogin(redirect) {
+  const currentRoute = getCurrentPageUrl().split("?")[0]
   if (currentRoute !== LOGIN_PAGE) {
-    uni.redirectTo({ url: LOGIN_PAGE })
+    uni.redirectTo({ url: buildLoginUrl(redirect) })
   }
 }
 
-function handleUnauthorized(reject, message) {
+function handleUnauthorized(reject, message, redirect) {
   clearLoginState()
   uni.showToast({
     title: message || "请先登录",
     icon: "none"
   })
-  redirectToLogin()
+  redirectToLogin(redirect)
   reject(new Error(message || "Unauthorized"))
 }
 
@@ -81,11 +129,12 @@ function showError(message) {
 
 export function request(options) {
   const method = (options.method || "GET").toUpperCase()
+  const requiresAuth = shouldAttachAuthorization(options.url, method)
   const headers = {
     ...(options.header || {})
   }
 
-  if (shouldAttachAuthorization(options.url, method)) {
+  if (requiresAuth) {
     const token = getToken()
     if (token) {
       headers.Authorization = `Bearer ${token}`
@@ -101,7 +150,13 @@ export function request(options) {
       success(response) {
         const body = response.data || {}
         if (response.statusCode === UNAUTHORIZED_CODE || body.code === UNAUTHORIZED_CODE) {
-          handleUnauthorized(reject, body.message)
+          if (requiresAuth) {
+            handleUnauthorized(reject, body.message, options.redirect)
+          } else {
+            const message = body.message || "请求未授权"
+            showError(message)
+            reject(new Error(message))
+          }
           return
         }
         if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -148,6 +203,14 @@ export function put(url, data) {
   return request({
     url,
     method: "PUT",
+    data
+  })
+}
+
+export function del(url, data) {
+  return request({
+    url,
+    method: "DELETE",
     data
   })
 }

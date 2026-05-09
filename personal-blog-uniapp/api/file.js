@@ -1,5 +1,5 @@
-import { buildApiUrl, storageKeys } from "../utils/config.js"
-import { clearLoginState, getToken } from "../utils/request.js"
+import { buildApiUrl } from "../utils/config.js"
+import { buildLoginUrl, clearLoginState, getCurrentPageUrl, getToken } from "../utils/request.js"
 
 export function uploadAvatar(filePath) {
   return new Promise((resolve, reject) => {
@@ -23,9 +23,8 @@ export function uploadAvatar(filePath) {
 
         if (response.statusCode === 401 || body.code === 401) {
           clearLoginState()
-          uni.removeStorageSync(storageKeys.token)
           uni.showToast({ title: body.message || "请先登录", icon: "none" })
-          uni.redirectTo({ url: "/pages/auth/login" })
+          uni.redirectTo({ url: buildLoginUrl(getCurrentPageUrl()) })
           reject(new Error(body.message || "Unauthorized"))
           return
         }

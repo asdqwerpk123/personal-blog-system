@@ -42,6 +42,12 @@
       "style": {
         "navigationBarTitleText": "我的"
       }
+    },
+    {
+      "path": "pages/user/comments",
+      "style": {
+        "navigationBarTitleText": "我的评论"
+      }
     }
   ],
   "globalStyle": {

@@ -16,6 +16,7 @@
 
 <script setup>
 import { reactive, ref } from "vue"
+import { onLoad } from "@dcloudio/uni-app"
 import { register } from "../../api/auth.js"
 
 const form = reactive({
@@ -25,10 +26,15 @@ const form = reactive({
 })
 const confirmPassword = ref("")
 const submitting = ref(false)
+const redirect = ref("")
+
+onLoad((options) => {
+  redirect.value = options.redirect ? decodeURIComponent(options.redirect) : ""
+})
 
 async function handleRegister() {
-  if (!form.userName.trim() || !form.password.trim()) {
-    uni.showToast({ title: "请输入用户名和密码", icon: "none" })
+  if (!form.userName.trim() || !form.nickName.trim() || !form.password.trim()) {
+    uni.showToast({ title: "请填写用户名、昵称和密码", icon: "none" })
     return
   }
   if (form.password !== confirmPassword.value) {
@@ -41,11 +47,11 @@ async function handleRegister() {
     await register({
       userName: form.userName.trim(),
       password: form.password,
-      nickName: form.nickName.trim() || form.userName.trim()
+      nickName: form.nickName.trim()
     })
     uni.showToast({ title: "注册成功", icon: "success" })
     setTimeout(() => {
-      uni.redirectTo({ url: "/pages/auth/login" })
+      goLogin()
     }, 300)
   } finally {
     submitting.value = false
@@ -53,7 +59,8 @@ async function handleRegister() {
 }
 
 function goLogin() {
-  uni.redirectTo({ url: "/pages/auth/login" })
+  const query = redirect.value ? `?redirect=${encodeURIComponent(redirect.value)}` : ""
+  uni.redirectTo({ url: `/pages/auth/login${query}` })
 }
 </script>
 

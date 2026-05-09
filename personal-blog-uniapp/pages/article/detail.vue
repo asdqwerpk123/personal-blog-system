@@ -32,15 +32,20 @@
           :disabled="commentLoading"
           @tap="loadComments(false)"
         >加载更多评论</button>
-        <view class="comment-entry">
+        <view v-if="canComment" class="comment-entry">
           <textarea
             v-model="commentContent"
             class="comment-input"
             maxlength="300"
-            placeholder="写下你的评论"
+            placeholder="写下你的评论，提交后需等待审核"
           />
-          <button class="primary-button" @tap="handleCommentTap">发表评论</button>
+          <button
+            class="primary-button"
+            :disabled="commentSubmitting || !commentContent.trim()"
+            @tap="submitComment"
+          >{{ commentSubmitting ? "提交中..." : "发表评论" }}</button>
         </view>
+        <view v-else class="comment-closed">本文已关闭评论</view>
       </view>
     </view>
   </view>
@@ -53,9 +58,9 @@ import CommentList from "../../components/CommentList.vue"
 import EmptyState from "../../components/EmptyState.vue"
 import LoadingState from "../../components/LoadingState.vue"
 import { getPublicArticle } from "../../api/article.js"
-import { pageArticleComments } from "../../api/comment.js"
+import { createUserComment, pageArticleComments } from "../../api/comment.js"
 import { defaultImages, resolveAssetUrl } from "../../utils/config.js"
-import { getToken } from "../../utils/request.js"
+import { buildLoginUrl, getCurrentPageUrl, isUserLoggedIn } from "../../utils/request.js"
 
 const articleId = ref(null)
 const article = ref(null)
@@ -67,12 +72,14 @@ const commentTotal = ref(0)
 const commentLoading = ref(false)
 const commentFinished = ref(false)
 const commentContent = ref("")
+const commentSubmitting = ref(false)
 
 const coverUrl = computed(() => resolveAssetUrl(article.value && article.value.coverUrl, defaultImages.cover))
 const contentNodes = computed(() => {
   const content = article.value && article.value.articleContent ? article.value.articleContent : ""
   return content.replace(/\n/g, "<br/>")
 })
+const canComment = computed(() => article.value && article.value.allowComment !== false)
 
 onLoad((options) => {
   articleId.value = Number(options.id)
@@ -123,15 +130,33 @@ async function loadComments(reset) {
   }
 }
 
-function handleCommentTap() {
-  if (!getToken()) {
-    uni.navigateTo({ url: "/pages/auth/login" })
+async function submitComment() {
+  if (!canComment.value) {
+    uni.showToast({ title: "本文已关闭评论", icon: "none" })
     return
   }
-  uni.showToast({
-    title: "发表评论将在 P2 完成",
-    icon: "none"
-  })
+  if (!isUserLoggedIn()) {
+    uni.navigateTo({ url: buildLoginUrl(getCurrentPageUrl()) })
+    return
+  }
+  const value = commentContent.value.trim()
+  if (!value) {
+    uni.showToast({ title: "请输入评论内容", icon: "none" })
+    return
+  }
+
+  commentSubmitting.value = true
+  try {
+    await createUserComment({
+      articleId: articleId.value,
+      commentContent: value
+    })
+    commentContent.value = ""
+    uni.showToast({ title: "评论已提交，等待审核", icon: "none" })
+    await refreshComments()
+  } finally {
+    commentSubmitting.value = false
+  }
 }
 
 function goHome() {
@@ -224,5 +249,15 @@ function formatDate(value) {
   background: #fbfdf9;
   color: #1f2b24;
   font-size: 28rpx;
+}
+
+.comment-closed {
+  margin-top: 20rpx;
+  padding: 22rpx;
+  border-radius: 10rpx;
+  background: #f4f0e8;
+  color: #7a6c45;
+  font-size: 26rpx;
+  text-align: center;
 }
 </style>

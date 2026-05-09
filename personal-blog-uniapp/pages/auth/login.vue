@@ -14,6 +14,7 @@
 
 <script setup>
 import { reactive, ref } from "vue"
+import { onLoad } from "@dcloudio/uni-app"
 import { login } from "../../api/auth.js"
 import { clearLoginState, saveLoginState } from "../../utils/request.js"
 
@@ -22,6 +23,11 @@ const form = reactive({
   password: ""
 })
 const submitting = ref(false)
+const redirect = ref("")
+
+onLoad((options) => {
+  redirect.value = options.redirect ? decodeURIComponent(options.redirect) : ""
+})
 
 async function handleLogin() {
   if (!form.userName.trim() || !form.password.trim()) {
@@ -35,25 +41,37 @@ async function handleLogin() {
       userName: form.userName.trim(),
       password: form.password
     })
-    if (!data || data.roleCode !== "USER") {
-      clearLoginState()
-      uni.showToast({ title: "仅普通用户可登录移动端", icon: "none" })
-      return
-    }
     saveLoginState(data)
     uni.showToast({ title: "登录成功", icon: "success" })
     setTimeout(() => {
-      uni.switchTab({ url: "/pages/user/profile" })
+      goAfterLogin()
     }, 300)
   } catch (error) {
     clearLoginState()
+    if (error && error.message === "Only USER accounts can sign in to this client") {
+      uni.showToast({ title: "仅普通用户可登录移动端", icon: "none" })
+    }
   } finally {
     submitting.value = false
   }
 }
 
+function goAfterLogin() {
+  if (!redirect.value) {
+    uni.switchTab({ url: "/pages/user/profile" })
+    return
+  }
+  const path = redirect.value.split("?")[0]
+  if (["/pages/index/index", "/pages/category/index", "/pages/user/profile"].includes(path)) {
+    uni.switchTab({ url: path })
+    return
+  }
+  uni.redirectTo({ url: redirect.value })
+}
+
 function goRegister() {
-  uni.navigateTo({ url: "/pages/auth/register" })
+  const query = redirect.value ? `?redirect=${encodeURIComponent(redirect.value)}` : ""
+  uni.navigateTo({ url: `/pages/auth/register${query}` })
 }
 </script>
 
