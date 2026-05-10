@@ -56,7 +56,22 @@ public class AdminAuthInterceptor implements AsyncHandlerInterceptor {
     }
 
     private boolean isPublicAdminEndpoint(HttpServletRequest request) {
-        return "POST".equalsIgnoreCase(request.getMethod()) && ADMIN_LOGIN_PATH.equals(request.getRequestURI());
+        return "POST".equalsIgnoreCase(request.getMethod())
+                && ADMIN_LOGIN_PATH.equals(resolvePathWithinApplication(request));
+    }
+
+    private String resolvePathWithinApplication(HttpServletRequest request) {
+        String servletPath = request.getServletPath();
+        if (servletPath != null && !servletPath.isEmpty()) {
+            return servletPath;
+        }
+
+        String requestUri = request.getRequestURI();
+        String contextPath = request.getContextPath();
+        if (contextPath != null && !contextPath.isEmpty() && requestUri != null && requestUri.startsWith(contextPath)) {
+            return requestUri.substring(contextPath.length());
+        }
+        return requestUri;
     }
 
     private boolean isAdminRole(String roleCode) {

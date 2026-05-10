@@ -231,6 +231,18 @@ class AdminAuthInterceptorTest {
     }
 
     @Test
+    void shouldAllowPostLoginWithoutBearerTokenUnderContextPath() throws Exception {
+        HandlerMethod handlerMethod = new HandlerMethod(loginController, loginMethod);
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/personal-blog-system/admin/auth/login");
+        request.setContextPath("/personal-blog-system");
+        request.setServletPath("/admin/auth/login");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        assertThat(interceptor.preHandle(request, response, handlerMethod)).isTrue();
+        assertThat(AdminAuthContext.get()).isNull();
+    }
+
+    @Test
     void shouldAllowOptionsRequestWithoutBearerToken() {
         HandlerMethod handlerMethod = new HandlerMethod(openController, openMethod);
         MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/admin/open");
