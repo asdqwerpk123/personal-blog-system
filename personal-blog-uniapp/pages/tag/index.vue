@@ -28,12 +28,13 @@
         @open="openArticle"
       />
     </template>
+    <LoadingState :loading="loadingMore" :finished="finished && articles.length > 0" />
   </view>
 </template>
 
 <script setup>
 import { ref } from "vue"
-import { onLoad } from "@dcloudio/uni-app"
+import { onLoad, onReachBottom } from "@dcloudio/uni-app"
 import ArticleCard from "../../components/ArticleCard.vue"
 import EmptyState from "../../components/EmptyState.vue"
 import LoadingState from "../../components/LoadingState.vue"
@@ -43,13 +44,25 @@ import { listPublicTags } from "../../api/tag.js"
 const tags = ref([])
 const selectedTagId = ref(null)
 const articles = ref([])
+const current = ref(1)
+const size = 20
+const total = ref(0)
 const loading = ref(false)
 const loadingArticles = ref(false)
+const loadingMore = ref(false)
+const finished = ref(false)
+const articleRequestSeq = ref(0)
 
 onLoad(async () => {
   await loadTags()
   if (tags.value.length) {
     selectTag(tags.value[0])
+  }
+})
+
+onReachBottom(() => {
+  if (!finished.value && !loadingArticles.value && !loadingMore.value) {
+    loadArticles(false)
   }
 })
 
@@ -64,16 +77,51 @@ async function loadTags() {
 
 async function selectTag(tag) {
   selectedTagId.value = tag.id
-  loadingArticles.value = true
+  const requestId = ++articleRequestSeq.value
+  current.value = 1
+  finished.value = false
+  await loadArticles(true, requestId)
+}
+
+async function loadArticles(reset, requestId = articleRequestSeq.value) {
+  if (!selectedTagId.value) {
+    return
+  }
+  if (!reset && (loadingArticles.value || loadingMore.value)) {
+    return
+  }
+
+  const filters = {
+    current: reset ? 1 : current.value,
+    tagId: selectedTagId.value
+  }
+
+  if (reset) {
+    loadingArticles.value = true
+  } else {
+    loadingMore.value = true
+  }
   try {
     const page = await pagePublicArticles({
-      current: 1,
-      size: 20,
-      tagId: tag.id
+      current: filters.current,
+      size,
+      tagId: filters.tagId
     })
-    articles.value = page && page.records ? page.records : []
+    if (requestId !== articleRequestSeq.value) {
+      return
+    }
+    const records = page && page.records ? page.records : []
+    total.value = page && typeof page.total === "number" ? page.total : records.length
+    articles.value = reset ? records : articles.value.concat(records)
+    finished.value = articles.value.length >= total.value || records.length < size
+    if (!finished.value) {
+      current.value += 1
+    }
   } finally {
-    loadingArticles.value = false
+    if (requestId === articleRequestSeq.value) {
+      loadingArticles.value = false
+      loadingMore.value = false
+    }
   }
 }
 
