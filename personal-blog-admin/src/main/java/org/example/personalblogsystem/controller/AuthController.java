@@ -22,21 +22,35 @@ public class AuthController {
     }
 
     @SecurityRequirements
-    @Operation(summary = "统一登录", description = "校验用户名密码并返回 Bearer access token。", security = {})
+    @Operation(summary = "admin login", description = "Validate credentials and return a Bearer access token.", security = {})
     @PostMapping("/admin/auth/login")
     public Result<LoginUserResponse> login(@RequestBody LoginRequest request) {
         return Result.ok(authService.login(request));
     }
 
     @SecurityRequirements
-    @Operation(summary = "uni-app user login", description = "Only USER role accounts can obtain a uni-app access token.", security = {})
+    @Operation(summary = "user login", description = "Only USER role accounts can obtain a user access token.", security = {})
     @PostMapping("/user/auth/login")
     public Result<LoginUserResponse> userLogin(@RequestBody LoginRequest request) {
         return Result.ok(authService.loginUser(request));
     }
 
+    @Operation(summary = "admin logout", description = "Remove current admin login state from Redis.")
+    @PostMapping("/admin/auth/logout")
+    public Result<Void> logout() {
+        authService.logout();
+        return Result.ok(null);
+    }
+
+    @Operation(summary = "user logout", description = "Remove current user login state from Redis.")
+    @PostMapping("/user/auth/logout")
+    public Result<Void> userLogout() {
+        authService.logout();
+        return Result.ok(null);
+    }
+
     @SecurityRequirements
-    @Operation(summary = "用户注册", description = "创建普通用户并默认分配 USER 角色。", security = {})
+    @Operation(summary = "user register", description = "Create a normal USER account.", security = {})
     @PostMapping("/user/auth/register")
     public Result<SysUserResponse> register(@RequestBody UserRegisterRequest request) {
         return Result.ok(authService.register(request));

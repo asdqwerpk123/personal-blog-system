@@ -1,4 +1,10 @@
 spring:
+  data:
+    redis:
+      host: ${BLOG_REDIS_PROD_HOST:${BLOG_REDIS_HOST}}
+      port: ${BLOG_REDIS_PROD_PORT:${BLOG_REDIS_PORT:6379}}
+      password: ${BLOG_REDIS_PROD_PASSWORD:${BLOG_REDIS_PASSWORD:}}
+      database: ${BLOG_REDIS_PROD_DATABASE:${BLOG_REDIS_DATABASE:0}}
   datasource:
     druid:
       url: ${BLOG_DB_PROD_URL:jdbc:mysql://localhost:3306/personal_blog_system}

@@ -11,5 +11,7 @@ public interface IAuthService {
 
     LoginUserResponse loginUser(LoginRequest request);
 
+    void logout();
+
     SysUserResponse register(UserRegisterRequest request);
 }

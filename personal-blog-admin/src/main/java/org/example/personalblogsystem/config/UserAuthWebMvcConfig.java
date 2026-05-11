@@ -1,27 +1,16 @@
 package org.example.personalblogsystem.config;
 
-import org.example.personalblogsystem.auth.UserAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class UserAuthWebMvcConfig implements WebMvcConfigurer {
 
-    private final UserAuthInterceptor userAuthInterceptor;
     private final BlogAuthProperties authProperties;
 
-    public UserAuthWebMvcConfig(UserAuthInterceptor userAuthInterceptor,
-                                BlogAuthProperties authProperties) {
-        this.userAuthInterceptor = userAuthInterceptor;
+    public UserAuthWebMvcConfig(BlogAuthProperties authProperties) {
         this.authProperties = authProperties;
-    }
-
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(userAuthInterceptor)
-                .addPathPatterns("/user/**");
     }
 
     @Override

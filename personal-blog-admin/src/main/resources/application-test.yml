@@ -1,4 +1,10 @@
 spring:
+  data:
+    redis:
+      host: ${BLOG_REDIS_TEST_HOST:${BLOG_REDIS_HOST:192.168.75.128}}
+      port: ${BLOG_REDIS_TEST_PORT:${BLOG_REDIS_PORT:6379}}
+      password: ${BLOG_REDIS_TEST_PASSWORD:${BLOG_REDIS_PASSWORD:}}
+      database: ${BLOG_REDIS_TEST_DATABASE:${BLOG_REDIS_DATABASE:0}}
   datasource:
     druid:
       url: ${BLOG_DB_TEST_URL}
