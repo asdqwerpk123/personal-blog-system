@@ -195,7 +195,7 @@ class BlogCommentControllerTest {
         mockMvc.perform(delete("/admin/comment/{id}", 3L)
                         .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test
@@ -248,7 +248,7 @@ class BlogCommentControllerTest {
         mockMvc.perform(delete("/admin/comment/{id}", 1L)
                         .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     private String loginAndGetAccessToken(String userName, String password) throws Exception {

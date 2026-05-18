@@ -1,6 +1,6 @@
 package org.example.personalblogsystem.config;
 
-import org.example.personalblogsystem.filter.JwtAuthenticationTokenFilter;
+import org.example.personalblogsystem.filter.JwtAuthenticationFilter;
 import org.example.personalblogsystem.handler.AccessDeniedHandlerImpl;
 import org.example.personalblogsystem.handler.AuthenticationEntryPointImpl;
 import org.example.personalblogsystem.service.PasswordHashService;
@@ -10,30 +10,34 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private static final String ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     private static final String ROLE_ADMIN = "ROLE_ADMIN";
     private static final String ROLE_USER = "ROLE_USER";
 
-    private final JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter;
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final AuthenticationEntryPointImpl authenticationEntryPoint;
     private final AccessDeniedHandlerImpl accessDeniedHandler;
 
-    public SecurityConfig(JwtAuthenticationTokenFilter jwtAuthenticationTokenFilter,
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
                           AuthenticationEntryPointImpl authenticationEntryPoint,
                           AccessDeniedHandlerImpl accessDeniedHandler) {
-        this.jwtAuthenticationTokenFilter = jwtAuthenticationTokenFilter;
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
         this.accessDeniedHandler = accessDeniedHandler;
     }
@@ -41,6 +45,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(csrf -> csrf.disable())
+                .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(authenticationEntryPoint)
@@ -48,6 +53,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST,
+                                "/login",
                                 "/admin/auth/login",
                                 "/user/auth/login",
                                 "/user/auth/register").permitAll()
@@ -59,11 +65,13 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/druid/**",
                                 "/error").permitAll()
+                        .requestMatchers("/user/info").authenticated()
+                        .requestMatchers("/admin/list").hasAnyAuthority(ROLE_SUPER_ADMIN, ROLE_ADMIN)
                         .requestMatchers("/admin/**").hasAnyAuthority(ROLE_SUPER_ADMIN, ROLE_ADMIN)
                         .requestMatchers("/user/**").hasAuthority(ROLE_USER)
                         .anyRequest().authenticated());
 
-        http.addFilterBefore(jwtAuthenticationTokenFilter, UsernamePasswordAuthenticationFilter.class);
+        http.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
@@ -73,6 +81,11 @@ public class SecurityConfig {
         DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider(userDetailsService);
         authenticationProvider.setPasswordEncoder(passwordEncoder);
         return new ProviderManager(authenticationProvider);
+    }
+
+    @Bean
+    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean

@@ -223,7 +223,7 @@ class AuthControllerTest {
         mockMvc.perform(get("/admin/user/1")
                         .header("Authorization", "Bearer " + accessToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test
@@ -306,6 +306,7 @@ class AuthControllerTest {
                 """, userName);
         assertThat(row.get("roleCode")).isEqualTo("USER");
         assertThat(row.get("userStatus")).isEqualTo("ENABLED");
+        assertThat(String.valueOf(row.get("passwordHash"))).startsWith("$2");
         assertThat(passwordHashService.matches(password, String.valueOf(row.get("passwordHash")))).isTrue();
 
         Map<String, Object> logRow = jdbcTemplate.queryForMap("""

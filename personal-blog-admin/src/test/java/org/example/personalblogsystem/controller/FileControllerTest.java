@@ -57,7 +57,7 @@ class FileControllerTest {
                         .file(uploadFile())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     @Test

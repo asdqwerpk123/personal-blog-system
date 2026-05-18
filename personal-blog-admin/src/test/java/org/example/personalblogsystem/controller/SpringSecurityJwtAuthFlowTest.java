@@ -110,12 +110,61 @@ class SpringSecurityJwtAuthFlowTest {
         mockMvc.perform(get("/user/profile/me")
                         .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
 
         mockMvc.perform(get("/admin/profile/me")
                         .header("Authorization", "Bearer " + userToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
+    }
+
+    @Test
+    void shouldExposeCourseLoginAliasWithMinimalTokenPayload() throws Exception {
+        MvcResult result = mockMvc.perform(post("/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest("root", "123456"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.id").doesNotExist())
+                .andReturn();
+
+        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        assertThat(data.path("accessToken").asText()).isNotBlank();
+        assertThat(redisStore).containsKey(ROOT_LOGIN_KEY);
+    }
+
+    @Test
+    void shouldExposeCurrentUserInfoForAnyAuthenticatedUserWithoutPasswordHash() throws Exception {
+        String adminToken = loginAndGetAccessToken("/admin/auth/login", "root", "123456");
+
+        mockMvc.perform(get("/user/info")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data.userName").value("root"))
+                .andExpect(jsonPath("$.data.roleCode").value("SUPER_ADMIN"))
+                .andExpect(jsonPath("$.data.passwordHash").doesNotExist());
+    }
+
+    @Test
+    void shouldAllowOnlyAdminRolesToAccessCourseAdminList() throws Exception {
+        String adminToken = loginAndGetAccessToken("/admin/auth/login", "root", "123456");
+        String userToken = loginAndGetAccessToken("/user/auth/login", "jerry", "123456");
+
+        mockMvc.perform(get("/admin/list")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.data[0].userName").isNotEmpty())
+                .andExpect(jsonPath("$.data[0].passwordHash").doesNotExist());
+
+        mockMvc.perform(get("/admin/list")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(403))
+                .andExpect(jsonPath("$.message").value("权限不足，无法访问该资源"));
     }
 
     @Test

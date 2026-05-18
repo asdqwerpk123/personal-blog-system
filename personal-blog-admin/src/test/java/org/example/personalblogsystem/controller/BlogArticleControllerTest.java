@@ -764,7 +764,7 @@ class BlogArticleControllerTest {
         mockMvc.perform(delete("/admin/article/{id}", 1L)
                         .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(401));
+                .andExpect(jsonPath("$.code").value(403));
     }
 
     private BlogArticle buildArticle(String title, String slug, String content, Long authorId) {
