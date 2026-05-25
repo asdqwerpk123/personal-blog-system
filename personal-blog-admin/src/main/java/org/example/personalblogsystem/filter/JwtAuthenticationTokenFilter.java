@@ -1,7 +1,7 @@
 package org.example.personalblogsystem.filter;
 
 import org.example.personalblogsystem.auth.JwtTokenService;
-import org.example.personalblogsystem.util.JwtUtil;
+import org.example.personalblogsystem.utils.JwtUtil;
 import org.example.personalblogsystem.utils.RedisCache;
 import org.springframework.security.core.userdetails.UserDetailsService;
 

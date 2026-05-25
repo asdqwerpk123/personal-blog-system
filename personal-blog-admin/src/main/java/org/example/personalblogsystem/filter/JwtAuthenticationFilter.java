@@ -9,7 +9,7 @@ import org.example.personalblogsystem.auth.AdminAuthPrincipal;
 import org.example.personalblogsystem.auth.JwtTokenService;
 import org.example.personalblogsystem.auth.LoginUser;
 import org.example.personalblogsystem.auth.UserAuthContext;
-import org.example.personalblogsystem.util.JwtUtil;
+import org.example.personalblogsystem.utils.JwtUtil;
 import org.example.personalblogsystem.utils.RedisCache;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;

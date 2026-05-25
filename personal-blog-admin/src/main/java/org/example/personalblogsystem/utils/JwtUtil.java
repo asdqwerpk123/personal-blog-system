@@ -1,4 +1,4 @@
-package org.example.personalblogsystem.util;
+package org.example.personalblogsystem.utils;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
