@@ -13,9 +13,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-/**
- * Course-facing JWT helper that uses a top-level jwt.* configuration and HS256 signing.
- */
+
 @Component
 public class JwtUtil {
 
@@ -33,16 +31,12 @@ public class JwtUtil {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Generate a JWT for the supplied Spring Security user.
-     */
+
     public String generateToken(UserDetails userDetails) {
         return generateToken(userDetails.getUsername());
     }
 
-    /**
-     * Generate a JWT with username as subject.
-     */
+
     public String generateToken(String username) {
         Date now = new Date();
         Date expiresAt = new Date(now.getTime() + expiration);
@@ -54,9 +48,7 @@ public class JwtUtil {
                 .compact();
     }
 
-    /**
-     * Parse and verify JWT claims.
-     */
+
     public Claims parseToken(String token) {
         return Jwts.parser()
                 .verifyWith(secretKey)
@@ -65,9 +57,7 @@ public class JwtUtil {
                 .getPayload();
     }
 
-    /**
-     * Extract username from token subject.
-     */
+
     public String getUsernameFromToken(String token) {
         return parseToken(token).getSubject();
     }
@@ -76,9 +66,7 @@ public class JwtUtil {
         return getUsernameFromToken(token);
     }
 
-    /**
-     * Validate token signature, expiration and username.
-     */
+
     public boolean validateToken(String token, UserDetails userDetails) {
         try {
             String username = getUsernameFromToken(token);

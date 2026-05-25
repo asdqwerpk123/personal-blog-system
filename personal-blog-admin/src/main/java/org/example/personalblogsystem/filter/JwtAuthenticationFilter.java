@@ -21,9 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Reads Bearer JWT tokens and populates Spring Security's authentication context.
- */
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

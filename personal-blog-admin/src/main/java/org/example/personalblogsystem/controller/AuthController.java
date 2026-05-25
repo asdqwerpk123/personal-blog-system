@@ -43,9 +43,7 @@ public class AuthController {
         this.sysRoleMapper = sysRoleMapper;
     }
 
-    /**
-     * Course login alias that reuses the existing admin login business flow.
-     */
+
     @SecurityRequirements
     @Operation(summary = "login", description = "Course login alias for /admin/auth/login.", security = {})
     @PostMapping("/login")
@@ -104,9 +102,7 @@ public class AuthController {
         return Result.ok(toResponse(user, role));
     }
 
-    /**
-     * Return all active users for administrators.
-     */
+
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_SUPER_ADMIN')")
     @Operation(summary = "admin user list", description = "Return all active users without password_hash.")
     @GetMapping("/admin/list")
