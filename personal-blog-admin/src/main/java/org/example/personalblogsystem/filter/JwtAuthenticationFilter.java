@@ -21,11 +21,20 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-
+/**
+ * JWT 请求认证过滤器，每个请求执行一次 Bearer Token 解析并写入 Spring Security 上下文。
+ * 同时兼容后台登录令牌和课程设计保留的简化 JWT 令牌，依赖 Redis 保存的登录态和 UserDetailsService。
+ */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
+    /**
+     * HTTP 请求头中承载访问令牌的标准字段。
+     */
     private static final String AUTHORIZATION_HEADER = "Authorization";
+    /**
+     * Bearer Token 的协议前缀。
+     */
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtTokenService jwtTokenService;
@@ -43,6 +52,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
+    /**
+     * 从请求中恢复认证信息，并在请求结束后清理线程上下文。
+     *
+     * @param request 当前 HTTP 请求
+     * @param response 当前 HTTP 响应
+     * @param filterChain 后续过滤器链
+     * @throws ServletException 过滤器链处理失败时抛出
+     * @throws IOException 读写请求或响应失败时抛出
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,

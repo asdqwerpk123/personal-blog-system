@@ -13,14 +13,27 @@ import java.io.Serializable;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * Spring Security 登录用户模型，承载数据库用户、角色和权限信息。
+ * 同时作为 Redis 登录态缓存对象，供 JWT 过滤器恢复 SecurityContext 使用。
+ */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class LoginUser implements UserDetails, Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
+    /**
+     * Redis 中保存登录态对象的键前缀。
+     */
     public static final String REDIS_KEY_PREFIX = "login:user:";
+    /**
+     * Spring Security authority 角色前缀，与安全配置中的 ROLE_* 保持一致。
+     */
     private static final String ROLE_PREFIX = "ROLE_";
+    /**
+     * 系统中表示账号启用状态的业务枚举值。
+     */
     private static final String ENABLED_STATUS = "ENABLED";
 
     private Long id;
@@ -56,18 +69,39 @@ public class LoginUser implements UserDetails, Serializable {
         this.permissions = buildPermissions(row.getRoleCode());
     }
 
+    /**
+     * 生成用户登录态在 Redis 中的缓存键。
+     *
+     * @param userId 用户主键
+     * @return Redis 登录态键名
+     */
     public static String redisKey(Long userId) {
         return REDIS_KEY_PREFIX + userId;
     }
 
+    /**
+     * 生成当前用户登录态在 Redis 中的缓存键。
+     *
+     * @return Redis 登录态键名
+     */
     public String redisKey() {
         return redisKey(id);
     }
 
+    /**
+     * 将登录用户转换为轻量认证主体，供 JWT 和请求上下文使用。
+     *
+     * @return 包含用户和角色信息的认证主体
+     */
     public AdminAuthPrincipal toPrincipal() {
         return new AdminAuthPrincipal(id, userName, roleId, roleCode);
     }
 
+    /**
+     * 返回当前用户在 Spring Security 中参与授权判断的权限集合。
+     *
+     * @return ROLE_* 格式的权限集合
+     */
     @Override
     @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -76,12 +110,22 @@ public class LoginUser implements UserDetails, Serializable {
                 : permissions.stream().map(SimpleGrantedAuthority::new).toList();
     }
 
+    /**
+     * 返回 Spring Security 认证所需的密码散列。
+     *
+     * @return 数据库中的 password_hash
+     */
     @Override
     @JsonIgnore
     public String getPassword() {
         return passwordHash;
     }
 
+    /**
+     * 返回 Spring Security 认证所需的用户名。
+     *
+     * @return 系统登录用户名
+     */
     @Override
     @JsonIgnore
     public String getUsername() {
@@ -106,6 +150,11 @@ public class LoginUser implements UserDetails, Serializable {
         return true;
     }
 
+    /**
+     * 判断账号是否启用。
+     *
+     * @return userStatus 等于 ENABLED 时返回 true
+     */
     @Override
     @JsonIgnore
     public boolean isEnabled() {

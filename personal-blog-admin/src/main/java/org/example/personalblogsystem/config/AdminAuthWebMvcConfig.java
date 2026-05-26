@@ -8,6 +8,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Path;
 
+/**
+ * 后台 Web MVC 配置类，负责管理端跨域规则和本地上传资源映射。
+ * 依赖 blog.auth.allowed-origins 与上传目录配置，支撑前端访问管理接口和静态上传文件。
+ */
 @Configuration
 @EnableConfigurationProperties({BlogAuthProperties.class, AdminUploadProperties.class})
 public class AdminAuthWebMvcConfig implements WebMvcConfigurer {
@@ -21,6 +25,11 @@ public class AdminAuthWebMvcConfig implements WebMvcConfigurer {
         this.uploadProperties = uploadProperties;
     }
 
+    /**
+     * 配置管理端接口和上传资源的跨域访问规则。
+     *
+     * @param registry Spring MVC 跨域配置注册器
+     */
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         String[] allowedOrigins = authProperties.getAllowedOrigins().stream()
@@ -39,6 +48,11 @@ public class AdminAuthWebMvcConfig implements WebMvcConfigurer {
                 .allowedHeaders("*");
     }
 
+    /**
+     * 将本地上传目录映射为 /uploads/** 静态访问路径。
+     *
+     * @param registry Spring MVC 静态资源处理器注册器
+     */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         registry.addResourceHandler("/uploads/friend-links/**")

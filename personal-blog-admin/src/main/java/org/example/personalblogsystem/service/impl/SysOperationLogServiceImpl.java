@@ -11,10 +11,25 @@ import org.springframework.util.StringUtils;
 
 import java.util.Locale;
 
+/**
+ * 操作日志服务实现类，基于 MyBatis Plus 构造动态查询条件并返回分页结果。
+ * 主要支撑后台审计日志列表的筛选、排序和历史结果值兼容。
+ */
 @Service
 public class SysOperationLogServiceImpl extends ServiceImpl<SysOperationLogMapper, SysOperationLog>
         implements ISysOperationLogService {
 
+    /**
+     * 按条件分页查询操作日志。
+     *
+     * @param current 当前页码，从 1 开始
+     * @param size 每页条数
+     * @param operatorUserId 操作人用户主键，可为空
+     * @param targetType 操作对象类型，可为空
+     * @param actionResult 操作结果，可为空；支持 SUCCESS、FAILURE
+     * @return 按创建时间和主键倒序排列的日志分页结果
+     * @throws IllegalArgumentException actionResult 非法时抛出
+     */
     @Override
     public Page<SysOperationLog> pageOperationLogs(long current,
                                                     long size,

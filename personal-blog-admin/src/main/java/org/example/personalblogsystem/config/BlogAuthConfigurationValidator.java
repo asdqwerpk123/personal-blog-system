@@ -10,11 +10,24 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 
+/**
+ * 认证配置启动校验器，在应用启动阶段检查 JWT 密钥、过期时间和跨域来源配置。
+ * 生产环境下额外禁止默认密钥、占位符、通配来源和本机回环地址，降低误配置风险。
+ */
 @Component
 public class BlogAuthConfigurationValidator {
 
+    /**
+     * 默认 JWT 密钥占位值，生产环境不能继续使用。
+     */
     private static final String PROD_PLACEHOLDER_SECRET = "change-me-for-real-use-please-32-bytes";
+    /**
+     * 配置占位符前缀，用于识别未解析的环境变量表达式。
+     */
     private static final String PLACEHOLDER_PREFIX = "${";
+    /**
+     * 跨域通配来源，生产环境禁止使用。
+     */
     private static final String WILDCARD_ORIGIN = "*";
 
     private final BlogAuthProperties blogAuthProperties;
@@ -25,6 +38,11 @@ public class BlogAuthConfigurationValidator {
         this.environment = environment;
     }
 
+    /**
+     * 校验认证相关配置是否满足运行要求。
+     *
+     * @throws IllegalStateException JWT 密钥、过期时间或跨域来源配置不合法时抛出
+     */
     @PostConstruct
     public void validate() {
         String secret = blogAuthProperties.getJwt().getSecret();

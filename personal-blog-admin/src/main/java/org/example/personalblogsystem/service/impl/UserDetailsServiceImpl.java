@@ -13,6 +13,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+/**
+ * Spring Security 用户详情加载服务，从 sys_user 和 sys_role 表组合认证所需的 LoginUser。
+ * 只加载未删除用户和有效角色，是账号密码认证流程的数据入口。
+ */
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
@@ -25,7 +29,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     }
 
     /**
-     * Load an active user and its active role for Spring Security authentication.
+     * 按用户名加载可登录用户及其角色信息。
+     *
+     * @param username 登录用户名
+     * @return Spring Security 可识别的用户详情对象
+     * @throws UsernameNotFoundException 用户名为空、用户不存在或角色无效时抛出
      */
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {

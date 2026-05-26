@@ -2,9 +2,9 @@
 
 ## 项目简介
 
-`personal-blog-system` 是一个基于 `Java 17`、`Spring Boot 4.0.3` 和 `Maven` 构建的多模块个人博客系统后端项目。
+`personal-blog-system` 是一个基于 `Java 17`、`Spring Boot 4.0.3`、`Maven` 和 `Vue 3` 构建的多模块个人博客系统前后端工程。
 
-当前仓库已经完成了课程设计可演示的后台 MVP：
+当前仓库已经完成了课程设计可演示的后台管理与作者中心 MVP：
 
 1. Maven 父子模块结构搭建
 2. MySQL 数据库设计与后端基础设施接入
@@ -12,17 +12,24 @@
 4. P1 标签、文章标签关联、评论管理
 5. 后台用户新增、编辑、禁用/启用、重置密码与角色分配
 6. P2 友情链接、自动操作日志、真实仪表盘统计与最小登录接口
+7. Bearer JWT 鉴权、Redis 登录态缓存、管理端与作者端身份隔离
+8. 作者中心、公开博客接口、头像 / 封面 / 友链 Logo 上传能力
 
-项目适合作为 `Web 应用实训`、课程设计、Spring Boot 入门练习以及后续博客系统功能扩展的基础工程。
+项目适合作为 `Web 应用实训`、课程设计、Spring Boot / Vue 入门练习以及后续博客系统功能扩展的基础工程。
 
 ## 技术栈
 
 - `Java 17`
 - `Spring Boot 4.0.3`
 - `Maven`
+- `Spring Security`
 - `MyBatis-Plus 3.5.16`
 - `Druid Spring Boot 4 Starter 1.2.28`
 - `MySQL 8.x`
+- `Redis`
+- `MinIO`
+- `Vue 3`
+- `Element Plus`
 - `JUnit 5`
 - `Navicat`
 - `IntelliJ IDEA`
@@ -64,16 +71,18 @@ personal-blog-system
 
 - Spring Boot 启动类
 - 数据源与多环境配置
-- MyBatis-Plus、Druid 集成
+- MyBatis-Plus、Druid、Redis、MinIO 集成
+- Spring Security、JWT 登录认证与接口鉴权
 - 控制器、持久层、测试代码
 
 #### `personal-blog-admin-web`
 
-后台管理前端模块，当前包含：
+后台管理与作者中心前端模块，当前包含：
 
 - 登录页和后台布局
 - 用户、文章、分类、标签、评论、友情链接、操作日志、角色字典页面
-- 仪表盘真实统计接口联调
+- 后台资料维护、资源上传、仪表盘真实统计接口联调
+- 作者中心仪表盘、文章、评论、个人资料页面
 
 #### `personal-blog-common`
 
@@ -95,7 +104,7 @@ personal-blog-system
 ### 1. 多模块父子工程结构
 
 - 根工程 `pom.xml` 已改为 `pom` 打包方式
-- 已声明两个子模块：
+- 已声明后端子模块：
   - `personal-blog-admin`
   - `personal-blog-common`
 - `personal-blog-admin` 已依赖 `personal-blog-common`
@@ -105,6 +114,8 @@ personal-blog-system
 - 已实现统一返回结果、错误码枚举、自定义异常和全局异常处理
 - 已整合 `MyBatis-Plus`
 - 已整合 `Druid` 数据源与监控
+- 已整合 `Spring Security`、`JWT` 和 `Redis` 登录态缓存
+- 已整合 `MinIO` 对象存储与本地上传目录配置
 - 已完成 `dev / test / prod` 多环境数据源配置
 
 ### 3. 后台接口能力
@@ -122,7 +133,12 @@ personal-blog-system
 - 友情链接：`GET /admin/friend-link/page`、`POST /admin/friend-link`、`PUT /admin/friend-link/{id}`、`DELETE /admin/friend-link/{id}`
 - 操作日志：`GET /admin/operation-log/page`
 - 登录：`POST /admin/auth/login`，返回脱敏用户信息与 Bearer `accessToken`
+- 登出：`POST /admin/auth/logout`
 - 仪表盘：`GET /admin/dashboard/summary`
+- 管理端资料：`GET /admin/profile/me`、`PUT /admin/profile/me`、`PUT /admin/profile/password`
+- 管理端文件上传：头像、文章封面、友链 Logo 上传接口
+- 公开接口：文章、分类、标签、友情链接查询接口
+- 作者中心：注册、登录、登出、作者资料、作者文章、作者评论、作者仪表盘与作者文件上传接口
 
 后台接口调用约定：
 
@@ -130,6 +146,7 @@ personal-blog-system
 - 后台登录仅允许 `SUPER_ADMIN`、`ADMIN` 账号成功获取管理端 token
 - 后台管理接口仅允许 `SUPER_ADMIN`、`ADMIN` 访问；普通 `USER` 不进入 `/admin/**`
 - `SUPER_ADMIN` 可以管理 `ADMIN` 和 `USER`，`ADMIN` 只能管理 `USER`，不允许创建 `SUPER_ADMIN`
+- `USER` 账号进入作者中心，只能维护自己的资料、文章和评论
 - OpenAPI JSON 和 Swagger UI 已同步展示 Bearer JWT 鉴权信息，便于前后端联调
 
 ### 4. 文档与测试验证
@@ -138,6 +155,7 @@ personal-blog-system
 
 - 数据库连接测试
 - `Mapper` / `Service` / `Controller` 主要用例测试
+- Redis 登录态、JWT 鉴权、后台与作者端路由守卫相关测试
 - 管理端前端单元测试与生产构建
 - OpenAPI 运行时文档：`/v3/api-docs`
 - Swagger UI：`/swagger-ui/index.html`
@@ -153,8 +171,22 @@ personal-blog-system
 - `JDK 17`
 - `Maven 3.9+`
 - `MySQL 8.x`
+- `Redis 6+`
 - `Navicat`
 - `IntelliJ IDEA`
+
+### 环境准备
+#### 1. Redis服务启动（Linux虚拟机）
+```bash
+# 查看所有容器状态
+docker ps -a
+
+# 如果看到redis容器但未运行，启动容器
+docker start redis
+
+# 测试Redis服务是否正常
+docker exec -it redis redis-cli ping
+```
 
 ### 1. 导入项目
 
@@ -212,6 +244,10 @@ sql/personal_blog_system.sql
 - `BLOG_DB_PROD_URL`
 - `BLOG_DB_PROD_USERNAME`
 - `BLOG_DB_PROD_PASSWORD`
+- `BLOG_REDIS_HOST`
+- `BLOG_REDIS_PORT`
+- `BLOG_REDIS_PASSWORD`
+- `BLOG_REDIS_DATABASE`
 - `BLOG_SERVER_PORT`
 
 本地默认开发环境配置等价于：
@@ -220,6 +256,15 @@ sql/personal_blog_system.sql
 jdbc:mysql://localhost:3306/personal_blog_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false
 username=root
 password=123456
+```
+
+本地默认开发环境 Redis 配置等价于：
+
+```text
+host=192.168.75.128
+port=6379
+password=
+database=0
 ```
 
 开发启动时请显式指定 `dev` profile，避免依赖任何隐式默认值：
@@ -244,7 +289,17 @@ password=123456
 
 详细初始化步骤、脚本说明、PowerShell / IDEA 注意事项和常见报错说明见 [docs/test-environment.md](docs/test-environment.md)。
 
-### 5. 启动项目
+### 5. 启动前检查 Redis
+
+后端 `dev` profile 默认连接 `192.168.75.128:6379`，启动项目前请确认 Redis 可用：
+
+```bash
+docker exec -it redis redis-cli ping
+```
+
+如果返回 `PONG`，说明 Redis 服务正常。若 Redis 地址不同，请通过 `BLOG_REDIS_HOST`、`BLOG_REDIS_PORT`、`BLOG_REDIS_PASSWORD`、`BLOG_REDIS_DATABASE` 覆盖默认配置。
+
+### 6. 启动项目
 
 项目启动类：
 
@@ -260,7 +315,7 @@ org.example.personalblogsystem.PersonalBlogSystemApplication
 
 项目默认启动端口为 `8081`。如果后续需要临时切换端口，可通过环境变量 `BLOG_SERVER_PORT` 覆盖。
 
-### 6. 启动前端
+### 7. 启动前端
 
 第一次进入前端模块时安装依赖：
 
@@ -276,7 +331,7 @@ npm --prefix .\personal-blog-admin-web run dev
 
 前端默认开发端口由 Vite 分配，通常为 `5173`。启动后在浏览器访问 Vite 输出的本地地址。
 
-### 7. 默认演示账号
+### 8. 默认演示账号
 
 初始化 SQL 默认提供以下课程设计演示账号：
 
@@ -289,7 +344,7 @@ USER: jerry / 123456
 
 其中 `SUPER_ADMIN` 和 `ADMIN` 用于后台管理端，`USER` 用于作者中心。
 
-### 8. 运行测试
+### 9. 运行测试
 
 第一次准备测试环境：
 
@@ -397,7 +452,9 @@ SQL 文件中包含多个触发器和存储过程，主要作用有：
 - OpenAPI / Swagger 文档
 - 用户、角色、分类、文章后台接口
 - 标签、文章标签、评论后台接口
-- 友情链接、操作日志分页、自动操作日志、仪表盘统计、最小登录接口
+- 友情链接、操作日志分页、自动操作日志、仪表盘统计、登录注册接口
+- Redis 登录态缓存、Bearer JWT 鉴权、后台与作者端身份隔离
+- 公开博客查询、作者中心、资料维护、头像 / 文章封面 / 友链 Logo 上传接口
 - 数据库连接与 CRUD / 接口测试
 
 ## Druid 监控页
@@ -435,9 +492,11 @@ password: admin123
 
 - P0 重点解决项目启动、统一返回、分页与 OpenAPI 文档
 - P1 补齐标签、文章标签关联、评论管理
-- P2 补齐友情链接、操作日志自动记录、真实仪表盘、登录接口
+- P2 补齐友情链接、操作日志自动记录、真实仪表盘、登录注册与登出接口
 - 当前管理端已经补齐 Bearer JWT 登录、`/admin/**` 默认鉴权和服务端身份绑定
-- 当前后台前端已经联调用户、文章、分类、标签、评论、友情链接、操作日志、角色字典和仪表盘页面
+- 当前作者端已经补齐注册登录、资料维护、文章管理、评论管理、作者仪表盘和文件上传
+- 当前公开端已经补齐文章、分类、标签、友情链接查询接口
+- 当前后台前端已经联调用户、文章、分类、标签、评论、友情链接、操作日志、角色字典、个人资料、资源上传和仪表盘页面
 
 ## 课程设计演示流程
 

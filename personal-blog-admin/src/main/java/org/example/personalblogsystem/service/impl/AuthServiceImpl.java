@@ -30,9 +30,16 @@ import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
+/**
+ * 认证服务实现类，负责账号密码认证、JWT 签发、Redis 登录态缓存和登录操作日志记录。
+ * 通过 AuthenticationManager 接入 Spring Security，并按角色区分后台登录与用户端登录。
+ */
 @Service
 public class AuthServiceImpl implements IAuthService {
 
+    /**
+     * 登录凭据校验失败时返回给前端的统一提示，避免暴露账号是否存在。
+     */
     private static final String INVALID_CREDENTIALS_MESSAGE = "用户名或密码错误";
 
     private final SysUserMapper sysUserMapper;
@@ -56,16 +63,37 @@ public class AuthServiceImpl implements IAuthService {
         this.sysUserService = sysUserService;
     }
 
+    /**
+     * 后台登录入口，允许管理员、超级管理员和普通用户通过统一登录接口认证。
+     *
+     * @param request 登录请求，用户名和密码不能为空
+     * @return 登录成功后的用户资料、访问令牌和过期时间
+     * @throws IllegalArgumentException 凭据错误或请求字段为空时抛出
+     * @throws BlogException 角色不被允许或认证主体无效时抛出
+     */
     @Override
     public LoginUserResponse login(LoginRequest request) {
         return loginInternal(request, this::isSupportedRole);
     }
 
+    /**
+     * 用户端登录入口，仅允许 USER 角色账号登录。
+     *
+     * @param request 登录请求，用户名和密码不能为空
+     * @return 登录成功后的用户资料、访问令牌和过期时间
+     * @throws IllegalArgumentException 凭据错误或请求字段为空时抛出
+     * @throws BlogException 非 USER 角色尝试登录用户端时抛出
+     */
     @Override
     public LoginUserResponse loginUser(LoginRequest request) {
         return loginInternal(request, this::isUserRole);
     }
 
+    /**
+     * 退出登录，删除 Redis 中的登录态并清空当前线程安全上下文。
+     *
+     * @throws BlogException 当前请求没有有效 LoginUser 主体时抛出未认证异常
+     */
     @Override
     public void logout() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -79,6 +107,9 @@ public class AuthServiceImpl implements IAuthService {
         UserAuthContext.clear();
     }
 
+    /**
+     * 登录模板流程：参数校验、Spring Security 认证、角色校验、签发令牌、缓存登录态并写入操作日志。
+     */
     private LoginUserResponse loginInternal(LoginRequest request, Predicate<String> rolePredicate) {
         validateRequest(request);
 
@@ -97,6 +128,12 @@ public class AuthServiceImpl implements IAuthService {
         return response;
     }
 
+    /**
+     * 注册普通用户账号。
+     *
+     * @param request 注册请求
+     * @return 去除密码散列后的用户资料
+     */
     @Override
     public SysUserResponse register(UserRegisterRequest request) {
         return sysUserService.registerUser(request);

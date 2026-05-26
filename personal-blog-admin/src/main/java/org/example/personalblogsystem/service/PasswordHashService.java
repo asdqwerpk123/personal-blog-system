@@ -8,6 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+/**
+ * 密码散列服务，统一处理新密码 BCrypt 加密和历史 SHA-256 密码兼容校验。
+ * 作为 Spring Security PasswordEncoder 的底层实现，避免登录流程直接感知存量密码格式。
+ */
 @Service
 public class PasswordHashService {
 
@@ -18,7 +22,11 @@ public class PasswordHashService {
     }
 
     /**
-     * Hash new passwords with BCrypt while keeping the existing password_hash column unchanged.
+     * 使用 BCrypt 生成新密码散列。
+     *
+     * @param rawPassword 用户提交的明文密码
+     * @return 可存入 password_hash 字段的 BCrypt 散列值
+     * @throws IllegalArgumentException 密码为空时抛出
      */
     public String hash(String rawPassword) {
         if (!StringUtils.hasText(rawPassword)) {
@@ -28,7 +36,11 @@ public class PasswordHashService {
     }
 
     /**
-     * Match both new BCrypt hashes and legacy SHA-256 hashes already stored in sys_user.
+     * 校验明文密码是否匹配 BCrypt 或历史 SHA-256 散列。
+     *
+     * @param rawPassword 用户提交的明文密码
+     * @param expectedHash 数据库保存的密码散列
+     * @return 密码匹配返回 true，否则返回 false
      */
     public boolean matches(String rawPassword, String expectedHash) {
         if (!StringUtils.hasText(rawPassword) || !StringUtils.hasText(expectedHash)) {
