@@ -2,4 +2,18 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="org.example.personalblogsystem.mapper.BlogArticleMapper">
 
+    <update id="publishScheduledArticles">
+        UPDATE blog_article
+        SET article_status = #{publishedStatus},
+            published_time = CASE
+                WHEN published_time IS NULL THEN #{now}
+                ELSE published_time
+            END,
+            update_time = #{now}
+        WHERE deleted = 0
+          AND article_status = #{draftStatus}
+          AND publish_time IS NOT NULL
+          AND publish_time &lt;= #{now}
+    </update>
+
 </mapper>

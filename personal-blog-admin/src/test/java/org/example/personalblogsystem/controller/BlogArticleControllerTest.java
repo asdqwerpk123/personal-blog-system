@@ -229,6 +229,35 @@ class BlogArticleControllerTest {
     }
 
     @Test
+    void shouldCreateDraftArticleWithFormattedPublishTime() throws Exception {
+        ObjectNode article = objectMapper.createObjectNode();
+        article.put("articleTitle", "Scheduled publish article");
+        article.put("articleSlug", randomSlug());
+        article.put("articleSummary", "summary");
+        article.put("coverUrl", "https://example.com/cover.png");
+        article.put("articleContent", "draft content");
+        article.put("categoryId", 1L);
+        article.put("articleStatus", "DRAFT");
+        article.put("publishTime", "2026-06-07 18:40:00");
+        article.put("topFlag", false);
+        article.put("allowComment", true);
+
+        JsonNode createdNode = performJson(post("/admin/article")
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(article)));
+
+        assertThat(createdNode.path("code").asInt()).isEqualTo(200);
+        long articleId = createdNode.path("data").path("id").asLong();
+        assertThat(articleId).isPositive();
+
+        BlogArticle persisted = blogArticleMapper.selectById(articleId);
+        assertThat(persisted).isNotNull();
+        assertThat(persisted.getArticleStatus()).isEqualTo("DRAFT");
+        assertThat(persisted.getPublishTime()).isEqualTo(LocalDateTime.of(2026, 6, 7, 18, 40, 0));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenUpdatingMissingArticle() throws Exception {
         BlogArticle article = buildArticle("Missing", randomSlug(), "draft content", 5L);
 
@@ -283,6 +312,40 @@ class BlogArticleControllerTest {
         assertThat(persistedAfterUpdate.getCoverUrl()).isEqualTo("https://example.com/updated-cover.png");
         assertThat(persistedAfterUpdate.getPublishedTime()).isEqualTo(originalPublishedTime);
         assertThat(persistedAfterUpdate.getPublishedTime()).isNotEqualTo(spoofedPublishedTime);
+    }
+
+    @Test
+    void shouldUpdateDraftArticleWithFormattedPublishTime() throws Exception {
+        BlogArticle created = buildArticle(
+                "Temp article " + UUID.randomUUID().toString().substring(0, 8),
+                randomSlug(),
+                "Initial content",
+                5L);
+        created.setArticleSummary("Initial summary");
+        created.setCategoryId(1L);
+        created.setArticleStatus("DRAFT");
+
+        long articleId = createArticle(created);
+
+        ObjectNode updateRequest = objectMapper.createObjectNode();
+        updateRequest.put("articleTitle", created.getArticleTitle() + " updated");
+        updateRequest.put("articleSlug", created.getArticleSlug());
+        updateRequest.put("articleSummary", "Updated summary");
+        updateRequest.put("articleContent", "Updated content");
+        updateRequest.put("categoryId", 1L);
+        updateRequest.put("articleStatus", "DRAFT");
+        updateRequest.put("publishTime", "2026-06-07 19:00:00");
+
+        JsonNode updateResponse = performJson(put("/admin/article/{id}", articleId)
+                .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(updateRequest)));
+
+        assertThat(updateResponse.path("code").asInt()).isEqualTo(200);
+
+        BlogArticle persistedAfterUpdate = blogArticleMapper.selectById(articleId);
+        assertThat(persistedAfterUpdate).isNotNull();
+        assertThat(persistedAfterUpdate.getPublishTime()).isEqualTo(LocalDateTime.of(2026, 6, 7, 19, 0, 0));
     }
 
     @Test

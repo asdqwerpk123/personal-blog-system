@@ -105,6 +105,7 @@ CREATE TABLE blog_article (
     view_count INT NOT NULL DEFAULT 0 COMMENT '浏览量',
     like_count INT NOT NULL DEFAULT 0 COMMENT '点赞量',
     published_time DATETIME NULL COMMENT '发布时间',
+    publish_time DATETIME NULL COMMENT '定时发布时间',
     create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted TINYINT(1) NOT NULL DEFAULT 0 COMMENT '逻辑删除，0未删除，1已删除',
@@ -112,6 +113,7 @@ CREATE TABLE blog_article (
     KEY idx_blog_article_author_id (author_id),
     KEY idx_blog_article_category_id (category_id),
     KEY idx_blog_article_status_deleted (article_status, deleted),
+    KEY idx_blog_article_scheduled_publish (article_status, publish_time, deleted),
     CONSTRAINT fk_blog_article_author_id FOREIGN KEY (author_id) REFERENCES sys_user (id),
     CONSTRAINT fk_blog_article_category_id FOREIGN KEY (category_id) REFERENCES blog_category (id)
         ON DELETE SET NULL
@@ -215,20 +217,20 @@ INSERT INTO blog_tag (id, tag_name, description, created_by, deleted) VALUES
 
 INSERT INTO blog_article (
     id, article_title, article_slug, article_summary, cover_url, article_content, author_id, category_id,
-    article_status, top_flag, allow_comment, view_count, like_count, published_time, deleted
+    article_status, top_flag, allow_comment, view_count, like_count, published_time, publish_time, deleted
 ) VALUES
 (1, 'Build a Personal Blog with Spring Boot', 'build-personal-blog-with-spring-boot',
  '一篇关于个人博客项目后端实践的示例文章。', NULL,
  '本文介绍如何为个人博客系统设计一个简洁的 Spring Boot 后端。', 2, 1,
- 'PUBLISHED', 1, 1, 120, 15, '2026-03-20 10:00:00', 0),
+ 'PUBLISHED', 1, 1, 120, 15, '2026-03-20 10:00:00', NULL, 0),
 (2, 'Vue Frontend Notes for Blog Project', 'vue-frontend-notes-for-blog-project',
  '一篇关于 Vue 页面规划和组件拆分的学习笔记。', NULL,
  '本文记录博客系统前端页面设计、路由与组件结构思路。', 4, 2,
- 'PUBLISHED', 0, 1, 58, 8, '2026-03-20 20:30:00', 0),
+ 'PUBLISHED', 0, 1, 58, 8, '2026-03-20 20:30:00', NULL, 0),
 (3, 'My First Draft', 'my-first-draft',
  '一篇等待进一步打磨的草稿文章。', NULL,
  '这是一篇由普通用户创建的草稿文章。', 5, 3,
- 'DRAFT', 0, 1, 0, 0, NULL, 0);
+ 'DRAFT', 0, 1, 0, 0, NULL, NULL, 0);
 
 INSERT INTO blog_article_tag (id, article_id, tag_id, deleted) VALUES
 (1, 1, 1, 0),

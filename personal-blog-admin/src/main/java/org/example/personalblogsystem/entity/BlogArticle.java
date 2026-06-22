@@ -112,6 +112,9 @@ public class BlogArticle implements Serializable {
     @TableField("published_time")
     private LocalDateTime publishedTime;
 
+    @TableField("publish_time")
+    private LocalDateTime publishTime;
+
     /**
      * 创建时间
      */

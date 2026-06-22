@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -234,6 +235,7 @@ public class BlogArticleController {
                 request.getCoverUrl(),
                 request.getArticleContent(),
                 request.getCategoryId(),
+                request.getPublishTime(),
                 request.getTopFlag(),
                 request.getAllowComment());
         article.setArticleStatus(request.getArticleStatus());
@@ -249,6 +251,7 @@ public class BlogArticleController {
                 request.getCoverUrl(),
                 request.getArticleContent(),
                 request.getCategoryId(),
+                request.getPublishTime(),
                 request.getTopFlag(),
                 request.getAllowComment());
         article.setArticleStatus(request.getArticleStatus());
@@ -262,6 +265,7 @@ public class BlogArticleController {
                                         String coverUrl,
                                         String articleContent,
                                         Long categoryId,
+                                        LocalDateTime publishTime,
                                         Boolean topFlag,
                                         Boolean allowComment) {
         article.setArticleTitle(articleTitle);
@@ -270,6 +274,7 @@ public class BlogArticleController {
         article.setCoverUrl(coverUrl);
         article.setArticleContent(articleContent);
         article.setCategoryId(categoryId);
+        article.setPublishTime(publishTime);
         article.setTopFlag(topFlag);
         article.setAllowComment(allowComment);
     }

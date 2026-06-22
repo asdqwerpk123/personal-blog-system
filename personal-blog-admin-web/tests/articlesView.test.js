@@ -88,6 +88,7 @@ describe('ArticlesView', () => {
         articleSummary: 'React 18 摘要',
         coverUrl: '/cover.png',
         articleContent: 'React 18 正文',
+        publishTime: '2026-06-07T18:40:00',
         topFlag: true,
         allowComment: false,
         viewCount: 1250,
@@ -159,6 +160,7 @@ describe('ArticlesView', () => {
     wrapper.vm.articleForm.articleSlug = 'admin-created-article';
     wrapper.vm.articleForm.categoryId = 1;
     wrapper.vm.articleForm.articleStatus = 'DRAFT';
+    wrapper.vm.articleForm.publishTime = '2026-06-07 18:40:00';
     wrapper.vm.articleForm.articleSummary = '摘要';
     wrapper.vm.articleForm.articleContent = '正文内容';
     wrapper.vm.articleForm.topFlag = true;
@@ -171,6 +173,7 @@ describe('ArticlesView', () => {
       articleSlug: 'admin-created-article',
       categoryId: 1,
       articleStatus: 'DRAFT',
+      publishTime: '2026-06-07 18:40:00',
       articleSummary: '摘要',
       coverUrl: '/uploads/article-covers/article-cover.png',
       articleContent: '正文内容',
@@ -192,6 +195,7 @@ describe('ArticlesView', () => {
 
     expect(wrapper.vm.articleDialogTitle).toBe('编辑文章');
     expect(wrapper.vm.articleForm.articleTitle).toBe('深入理解 React 18 并发渲染机制');
+    expect(wrapper.vm.articleForm.publishTime).toBe('2026-06-07 18:40:00');
 
     wrapper.vm.articleForm.articleTitle = 'React 18 编辑版';
     wrapper.vm.articleForm.articleStatus = 'PRIVATE';
@@ -200,6 +204,7 @@ describe('ArticlesView', () => {
     expect(updateArticle).toHaveBeenCalledWith(101, expect.objectContaining({
       articleTitle: 'React 18 编辑版',
       articleStatus: 'PRIVATE',
+      publishTime: '2026-06-07 18:40:00',
       articleContent: 'React 18 正文'
     }));
   });

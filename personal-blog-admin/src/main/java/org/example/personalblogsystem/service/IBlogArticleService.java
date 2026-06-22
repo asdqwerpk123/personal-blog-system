@@ -35,6 +35,10 @@ public interface IBlogArticleService extends IService<BlogArticle> {
 
     BlogArticle updateArticleStatus(Long id, String status);
 
+    int publishScheduledArticles();
+
+    int publishArticleById(Long id);
+
     boolean deleteArticle(Long id);
 
     Page<UserArticleResponse> pageUserArticles(long current,

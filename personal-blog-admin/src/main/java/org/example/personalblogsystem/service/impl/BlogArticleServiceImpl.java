@@ -51,7 +51,13 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
 
     private static final int FORBIDDEN_CODE = 403;
     private static final String FORBIDDEN_MESSAGE = "无权限操作";
-    private static final Set<String> USER_ARTICLE_STATUSES = Set.of("DRAFT", "PUBLISHED", "PRIVATE");
+    private static final String ARTICLE_STATUS_DRAFT = "DRAFT";
+    private static final String ARTICLE_STATUS_PUBLISHED = "PUBLISHED";
+    private static final String ARTICLE_STATUS_PRIVATE = "PRIVATE";
+    private static final Set<String> USER_ARTICLE_STATUSES = Set.of(
+            ARTICLE_STATUS_DRAFT,
+            ARTICLE_STATUS_PUBLISHED,
+            ARTICLE_STATUS_PRIVATE);
 
     private final JdbcTemplate jdbcTemplate;
     private final SysUserMapper sysUserMapper;
@@ -90,7 +96,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
                                                           Long categoryId,
                                                           Long tagId) {
         LambdaQueryWrapper<BlogArticle> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(BlogArticle::getArticleStatus, "PUBLISHED");
+        queryWrapper.eq(BlogArticle::getArticleStatus, ARTICLE_STATUS_PUBLISHED);
         if (StringUtils.hasText(keyword)) {
             String trimmedKeyword = keyword.trim();
             queryWrapper.and(wrapper -> wrapper.like(BlogArticle::getArticleTitle, trimmedKeyword)
@@ -125,7 +131,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     public PublicArticleDetailResponse getPublicArticle(Long id) {
         BlogArticle article = lambdaQuery()
                 .eq(BlogArticle::getId, id)
-                .eq(BlogArticle::getArticleStatus, "PUBLISHED")
+                .eq(BlogArticle::getArticleStatus, ARTICLE_STATUS_PUBLISHED)
                 .one();
         if (article == null) {
             throw new BlogException(ResultCodeEnum.NOT_FOUND);
@@ -140,10 +146,11 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         validateArticleReferences(article, null);
         LocalDateTime now = LocalDateTime.now();
         article.setId(null);
-        article.setArticleStatus(normalizeStatus(article.getArticleStatus(), "DRAFT"));
+        article.setArticleStatus(normalizeStatus(article.getArticleStatus(), ARTICLE_STATUS_DRAFT));
         article.setTopFlag(article.getTopFlag() != null && article.getTopFlag());
         article.setAllowComment(article.getAllowComment() == null || article.getAllowComment());
         article.setPublishedTime(null);
+        article.setPublishTime(article.getPublishTime());
         article.setViewCount(0);
         article.setLikeCount(0);
         article.setCreateTime(now);
@@ -167,6 +174,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
 
         Long preservedAuthorId = existing.getAuthorId();
         LocalDateTime preservedPublishedTime = existing.getPublishedTime();
+        LocalDateTime preservedPublishTime = existing.getPublishTime();
         article.setAuthorId(preservedAuthorId);
         validateArticleReferences(article, id);
         existing.setArticleTitle(article.getArticleTitle());
@@ -182,6 +190,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         existing.setAllowComment(article.getAllowComment() == null ? existing.getAllowComment() : article.getAllowComment());
         existing.setAuthorId(preservedAuthorId);
         existing.setPublishedTime(preservedPublishedTime);
+        existing.setPublishTime(article.getPublishTime() == null ? preservedPublishTime : article.getPublishTime());
         existing.setUpdateTime(LocalDateTime.now());
         try {
             if (!updateById(existing)) {
@@ -208,6 +217,32 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         }
         operationLogRecordService.recordSuccess("ARTICLE", id, "CHANGE_ARTICLE_STATUS", "修改文章状态：" + existing.getArticleTitle() + " -> " + existing.getArticleStatus());
         return getById(id);
+    }
+
+    @Override
+    @Transactional
+    public int publishScheduledArticles() {
+        return baseMapper.publishScheduledArticles(
+                LocalDateTime.now(),
+                ARTICLE_STATUS_DRAFT,
+                ARTICLE_STATUS_PUBLISHED);
+    }
+
+    @Override
+    @Transactional
+    public int publishArticleById(Long id) {
+        BlogArticle existing = getById(id);
+        if (existing == null || !ARTICLE_STATUS_DRAFT.equals(existing.getArticleStatus())) {
+            return 0;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        existing.setArticleStatus(ARTICLE_STATUS_PUBLISHED);
+        if (existing.getPublishedTime() == null) {
+            existing.setPublishedTime(now);
+        }
+        existing.setUpdateTime(now);
+        return updateById(existing) ? 1 : 0;
     }
 
     @Override
@@ -289,7 +324,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         article.setArticleContent(request.getArticleContent().trim());
         article.setAuthorId(authorId);
         article.setCategoryId(request.getCategoryId());
-        article.setArticleStatus(normalizeUserStatus(request.getArticleStatus(), "DRAFT"));
+        article.setArticleStatus(normalizeUserStatus(request.getArticleStatus(), ARTICLE_STATUS_DRAFT));
         article.setTopFlag(false);
         article.setAllowComment(true);
         article.setViewCount(0);
@@ -380,9 +415,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
     public UserDashboardSummaryResponse getUserDashboardSummary(Long authorId) {
         UserDashboardSummaryResponse response = new UserDashboardSummaryResponse();
         response.setArticleCount(countByAuthorAndStatus(authorId, null));
-        response.setPublishedCount(countByAuthorAndStatus(authorId, "PUBLISHED"));
-        response.setDraftCount(countByAuthorAndStatus(authorId, "DRAFT"));
-        response.setPrivateCount(countByAuthorAndStatus(authorId, "PRIVATE"));
+        response.setPublishedCount(countByAuthorAndStatus(authorId, ARTICLE_STATUS_PUBLISHED));
+        response.setDraftCount(countByAuthorAndStatus(authorId, ARTICLE_STATUS_DRAFT));
+        response.setPrivateCount(countByAuthorAndStatus(authorId, ARTICLE_STATUS_PRIVATE));
         response.setTotalViewCount(lambdaQuery()
                 .eq(BlogArticle::getAuthorId, authorId)
                 .list()
@@ -432,7 +467,9 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
         }
 
         String normalized = value.toUpperCase(Locale.ROOT);
-        if (!"DRAFT".equals(normalized) && !"PUBLISHED".equals(normalized) && !"PRIVATE".equals(normalized)) {
+        if (!ARTICLE_STATUS_DRAFT.equals(normalized)
+                && !ARTICLE_STATUS_PUBLISHED.equals(normalized)
+                && !ARTICLE_STATUS_PRIVATE.equals(normalized)) {
             throw new IllegalArgumentException("status must be one of DRAFT, PUBLISHED, PRIVATE");
         }
         return normalized;
@@ -449,7 +486,7 @@ public class BlogArticleServiceImpl extends ServiceImpl<BlogArticleMapper, BlogA
 
         String normalized = value.toUpperCase(Locale.ROOT);
         if ("OFFLINE".equals(normalized)) {
-            return "PRIVATE";
+            return ARTICLE_STATUS_PRIVATE;
         }
         if (!USER_ARTICLE_STATUSES.contains(normalized)) {
             throw new IllegalArgumentException("文章状态不正确");

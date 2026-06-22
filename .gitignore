@@ -1,43 +1,16 @@
-HELP.md
-target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+personal-blog-uniapp/
+failure_logs/
+AGENTS.md
+*.log
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
-
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
-### VS Code ###
-.vscode/
-
-### Frontend admin web ###
-personal-blog-admin-web/node_modules/
-personal-blog-admin-web/dist/
-personal-blog-admin-web/coverage/
-personal-blog-admin-web/.vite/
-
-### Runtime uploads ###
+.idea/
+logs/
 uploads/
+
 personal-blog-admin/uploads/
+personal-blog-admin/target/
+personal-blog-common/target/
+
+personal-blog-admin-web/.vite/
+personal-blog-admin-web/dist/
+personal-blog-admin-web/node_modules/

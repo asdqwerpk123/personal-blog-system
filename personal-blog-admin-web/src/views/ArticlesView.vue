@@ -184,6 +184,18 @@
           </el-select>
         </el-form-item>
 
+        <el-form-item label="定时发布时间" prop="publishTime">
+          <el-date-picker
+            v-model="articleForm.publishTime"
+            class="article-full-control"
+            type="datetime"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            format="YYYY-MM-DD HH:mm:ss"
+            clearable
+            placeholder="不填写则不启用定时发布"
+          />
+        </el-form-item>
+
         <el-form-item label="摘要" prop="articleSummary">
           <el-input
             v-model="articleForm.articleSummary"
@@ -269,6 +281,9 @@
         </el-descriptions-item>
         <el-descriptions-item label="发布时间">
           {{ formatDate(articleDetail.publishedTime || articleDetail.createTime) }}
+        </el-descriptions-item>
+        <el-descriptions-item label="定时发布时间">
+          {{ formatDate(articleDetail.publishTime) }}
         </el-descriptions-item>
         <el-descriptions-item label="浏览量">
           {{ formatNumber(articleDetail.viewCount || 0) }}
@@ -370,6 +385,7 @@ const articleForm = reactive({
   articleSlug: '',
   categoryId: '',
   articleStatus: 'DRAFT',
+  publishTime: '',
   articleSummary: '',
   coverUrl: '',
   articleContent: '',
@@ -619,6 +635,7 @@ function resetArticleForm() {
   articleForm.articleSlug = '';
   articleForm.categoryId = '';
   articleForm.articleStatus = 'DRAFT';
+  articleForm.publishTime = '';
   articleForm.articleSummary = '';
   articleForm.coverUrl = '';
   articleForm.articleContent = '';
@@ -654,6 +671,7 @@ function fillArticleForm(article) {
   articleForm.articleSlug = article.articleSlug || '';
   articleForm.categoryId = article.categoryId ?? '';
   articleForm.articleStatus = article.articleStatus || 'DRAFT';
+  articleForm.publishTime = article.publishTime ? formatDate(article.publishTime) : '';
   articleForm.articleSummary = article.articleSummary || '';
   articleForm.coverUrl = article.coverUrl || '';
   articleForm.articleContent = article.articleContent || '';
@@ -668,6 +686,7 @@ function buildArticlePayload() {
     articleSlug: articleForm.articleSlug,
     categoryId: articleForm.categoryId === '' ? null : articleForm.categoryId,
     articleStatus: articleForm.articleStatus,
+    publishTime: articleForm.publishTime || null,
     articleSummary: articleForm.articleSummary,
     coverUrl: articleForm.coverUrl,
     articleContent: articleForm.articleContent,
