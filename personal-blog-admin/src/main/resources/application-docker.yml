@@ -1,0 +1,42 @@
+spring:
+  data:
+    redis:
+      host: ${BLOG_REDIS_HOST:redis}
+      port: ${BLOG_REDIS_PORT:6379}
+      password: ${BLOG_REDIS_PASSWORD:}
+      database: ${BLOG_REDIS_DATABASE:0}
+  datasource:
+    druid:
+      url: ${BLOG_DB_URL:jdbc:mysql://mysql:3306/personal_blog_system?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&useSSL=false}
+      username: ${BLOG_DB_USERNAME:root}
+      password: ${BLOG_DB_PASSWORD:123456}
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      test-while-idle: true
+      validation-query: SELECT 1
+      stat-view-servlet:
+        enabled: false
+      web-stat-filter:
+        enabled: false
+mybatis-plus:
+  mapper-locations: classpath:/mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+blog:
+  auth:
+    allowed-origins: ${BLOG_ADMIN_ALLOWED_ORIGINS:http://localhost}
+    jwt:
+      secret: ${BLOG_ADMIN_JWT_SECRET:your-32-character-secret-key-12345678}
+      access-token-expire-minutes: ${BLOG_ADMIN_JWT_ACCESS_TOKEN_EXPIRE_MINUTES:120}
+minio:
+  enabled: ${MINIO_ENABLED:true}
+  endpoint: ${MINIO_ENDPOINT:http://minio:9000}
+  publicEndpoint: ${MINIO_PUBLIC_ENDPOINT:http://localhost:1900}
+  accessKey: ${MINIO_ACCESS_KEY:minioadmin}
+  secretKey: ${MINIO_SECRET_KEY:minioadmin}
+  bucketName: ${MINIO_BUCKET_NAME:personal-blog}
+xxl:
+  job:
+    enabled: ${XXL_JOB_ENABLED:false}

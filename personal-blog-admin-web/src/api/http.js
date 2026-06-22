@@ -4,8 +4,10 @@ import { ElMessage } from 'element-plus';
 import { toChineseBusinessMessage } from '@/utils/businessErrors.js';
 import { clearStoredAuth, getStoredToken } from '@/utils/authStorage.js';
 
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+
 const http = axios.create({
-  baseURL: '',
+  baseURL: apiBaseUrl,
   timeout: 15000
 });
 
