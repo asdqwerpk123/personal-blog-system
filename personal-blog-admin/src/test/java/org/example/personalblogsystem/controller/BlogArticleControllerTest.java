@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.example.personalblogcommon.result.ResultCodeEnum;
 import org.example.personalblogsystem.PersonalBlogSystemApplication;
-import org.example.personalblogsystem.auth.AdminAuthPrincipal;
-import org.example.personalblogsystem.auth.JwtTokenService;
 import org.example.personalblogsystem.dto.ArticleTagUpdateRequest;
 import org.example.personalblogsystem.dto.LoginRequest;
 import org.example.personalblogsystem.entity.BlogArticle;
@@ -56,9 +54,6 @@ class BlogArticleControllerTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private JwtTokenService jwtTokenService;
-
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private MockMvc mockMvc;
@@ -85,6 +80,10 @@ class BlogArticleControllerTest {
 
     @Test
     void shouldReturnPagedArticles() throws Exception {
+        Integer expectedTotal = jdbcTemplate.queryForObject(
+                "select count(*) from blog_article where deleted = 0",
+                Integer.class);
+
         mockMvc.perform(get("/admin/article/page")
                         .header("Authorization", "Bearer " + loginAndGetAccessToken("root", "123456"))
                         .param("current", "1")
@@ -94,7 +93,7 @@ class BlogArticleControllerTest {
                 .andExpect(jsonPath("$.data.current").value(1))
                 .andExpect(jsonPath("$.data.size").value(2))
                 .andExpect(jsonPath("$.data.records.length()").value(2))
-                .andExpect(jsonPath("$.data.total").value(3));
+                .andExpect(jsonPath("$.data.total").value(expectedTotal));
     }
 
     @Test
@@ -825,7 +824,7 @@ class BlogArticleControllerTest {
     @Test
     void shouldRejectNormalUserDeleteThroughAdminEndpoint() throws Exception {
         mockMvc.perform(delete("/admin/article/{id}", 1L)
-                        .header("Authorization", "Bearer " + issueNormalUserAccessToken()))
+                        .header("Authorization", "Bearer " + loginAndGetUserAccessToken("jerry", "123456")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(403));
     }
@@ -866,9 +865,17 @@ class BlogArticleControllerTest {
                 .asText();
     }
 
-    private String issueNormalUserAccessToken() {
-        AdminAuthPrincipal principal = new AdminAuthPrincipal(5L, "jerry", 3L, "USER");
-        return jwtTokenService.issueAccessToken(principal, jwtTokenService.calculateAccessTokenExpiresAt());
+    private String loginAndGetUserAccessToken(String userName, String password) throws Exception {
+        MvcResult result = mockMvc.perform(post("/user/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest(userName, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString())
+                .path("data")
+                .path("accessToken")
+                .asText();
     }
 
     private LoginRequest loginRequest(String userName, String password) {
