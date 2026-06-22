@@ -15,6 +15,10 @@ describe('http client authorization', () => {
     sessionStorage.clear();
   });
 
+  it('uses /api as the default base URL', () => {
+    expect(http.defaults.baseURL).toBe('/api');
+  });
+
   it('adds Authorization for authenticated admin and user API requests only', async () => {
     persistAuth({
       token: 'admin-token',

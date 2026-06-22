@@ -30,3 +30,20 @@ blog:
     jwt:
       secret: ${BLOG_ADMIN_JWT_SECRET}
       access-token-expire-minutes: ${BLOG_ADMIN_JWT_ACCESS_TOKEN_EXPIRE_MINUTES:120}
+minio:
+  enabled: ${MINIO_ENABLED:false}
+  endpoint: ${MINIO_ENDPOINT:}
+  publicEndpoint: ${MINIO_PUBLIC_ENDPOINT:${MINIO_ENDPOINT:}}
+  accessKey: ${MINIO_ACCESS_KEY:}
+  secretKey: ${MINIO_SECRET_KEY:}
+  bucketName: ${MINIO_BUCKET_NAME:}
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN_ADDRESSES:http://127.0.0.1:8088/xxl-job-admin}
+    accessToken: ${XXL_JOB_ACCESS_TOKEN:default_token}
+    executor:
+      appname: ${XXL_JOB_EXECUTOR_APPNAME:blog-job-executor}
+      port: ${XXL_JOB_EXECUTOR_PORT:9999}
+      logpath: ${XXL_JOB_EXECUTOR_LOGPATH:logs/xxl-job}
+      logretentiondays: ${XXL_JOB_EXECUTOR_LOG_RETENTION_DAYS:30}

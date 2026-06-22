@@ -1,0 +1,14 @@
+.git
+.worktrees
+.idea
+failure_logs
+logs
+uploads
+personal-blog-admin/target
+personal-blog-common/target
+personal-blog-admin-web/node_modules
+personal-blog-admin-web/dist
+personal-blog-admin-web/.vite
+**/node_modules
+**/dist
+**/target

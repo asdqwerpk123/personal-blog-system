@@ -68,7 +68,7 @@ public class MinioServiceImpl implements IMinioService {
                             .build()
             );
 
-            return minioProperties.getEndpoint()
+            return resolvePublicEndpoint()
                     + "/"
                     + bucketName
                     + "/"
@@ -93,5 +93,17 @@ public class MinioServiceImpl implements IMinioService {
 
     private String normalizeContentType(String contentType) {
         return contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String resolvePublicEndpoint() {
+        String publicEndpoint = minioProperties.getPublicEndpoint();
+        if (publicEndpoint != null && !publicEndpoint.trim().isEmpty()) {
+            return stripTrailingSlash(publicEndpoint.trim());
+        }
+        return stripTrailingSlash(minioProperties.getEndpoint());
+    }
+
+    private String stripTrailingSlash(String value) {
+        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 }
