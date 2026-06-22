@@ -8,7 +8,7 @@
       <h1 id="login-title">个人博客管理系统</h1>
       <p class="login-subtitle">欢迎登录后台管理系统</p>
 
-      <el-form ref="formRef" class="login-form" :model="form" :rules="rules" label-position="top" @submit.prevent>
+      <el-form ref="formRef" class="login-form" :model="form" :rules="rules" label-position="top" @submit.prevent="handleLogin">
         <el-form-item label="用户名" prop="userName">
           <el-input v-model.trim="form.userName" size="large" placeholder="请输入用户名" :prefix-icon="User" />
         </el-form-item>
@@ -30,7 +30,7 @@
           <a href="#" @click.prevent>忘记密码?</a>
         </div>
 
-        <el-button class="login-button" type="primary" size="large" :loading="loading" @click="handleLogin">
+        <el-button class="login-button" native-type="button" type="primary" size="large" :loading="loading" @click="handleLogin">
           登录
         </el-button>
 
